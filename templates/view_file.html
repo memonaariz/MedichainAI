@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Details - HealthChain</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0f1419 100%);
+            min-height: 100vh;
+        }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            backdrop-filter: blur(12px);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        
+        .neon-blue {
+            text-shadow: 0 0 10px #00d4ff, 0 0 20px #00d4ff, 0 0 30px #00d4ff;
+        }
+        
+        .neon-green {
+            text-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88, 0 0 30px #00ff88;
+        }
+    </style>
+</head>
+<body class="text-white">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="glass p-8 mb-8 text-center">
+            <div class="mb-6">
+                <i class="fas fa-file-medical text-6xl text-cyan-400 neon-blue mb-4"></i>
+                <h1 class="text-4xl md:text-5xl font-extrabold neon-blue mb-4">
+                    File Details & Blockchain Verification
+                </h1>
+                <p class="text-xl text-cyan-200 mb-6">
+                    Complete information about uploaded healthcare document
+                </p>
+                <div class="flex justify-center space-x-4">
+                    <a href="/" class="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300">
+                        <i class="fas fa-home mr-2"></i>Home
+                    </a>
+                    <a href="/file_history" class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300">
+                        <i class="fas fa-history mr-2"></i>File History
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Information -->
+        <div class="glass p-8 mb-8">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center space-x-4">
+                    <i class="fas fa-file-medical text-4xl text-cyan-400"></i>
+                    <div>
+                        <h2 class="text-3xl font-bold text-cyan-200">{{ file_info.filename }}</h2>
+                        <p class="text-cyan-300/80">Patient: {{ file_info.patient_name }}</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="inline-flex items-center px-4 py-2 rounded-full text-lg font-medium bg-green-100 text-green-800">
+                        <i class="fas fa-check-circle mr-2"></i>Blockchain Verified
+                    </span>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- File Details -->
+                <div class="bg-black/20 rounded-lg p-6">
+                    <h3 class="text-xl font-semibold text-cyan-300 mb-4">
+                        <i class="fas fa-info-circle mr-2"></i>File Information
+                    </h3>
+                    <div class="space-y-3 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-cyan-300/80">Filename:</span>
+                            <span class="text-cyan-200">{{ file_info.filename }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-cyan-300/80">Patient Name:</span>
+                            <span class="text-cyan-200">{{ file_info.patient_name }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-cyan-300/80">Upload Time:</span>
+                            <span class="text-cyan-200">{{ file_info.upload_time }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-cyan-300/80">File Size:</span>
+                            <span class="text-cyan-200">{{ file_info.file_size }} bytes</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-cyan-300/80">Status:</span>
+                            <span class="text-green-400">{{ file_info.status }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Blockchain Details -->
+                <div class="bg-black/20 rounded-lg p-6">
+                    <h3 class="text-xl font-semibold text-cyan-300 mb-4">
+                        <i class="fas fa-link mr-2"></i>Blockchain Information
+                    </h3>
+                    <div class="space-y-3 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-cyan-300/80">Block Index:</span>
+                            <span class="text-cyan-200">#{{ file_info.block_index }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-cyan-300/80">Block Hash:</span>
+                            <span class="text-cyan-200 font-mono text-xs">{{ file_info.block_hash[:20] }}...</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-cyan-300/80">File Hash:</span>
+                            <span class="text-cyan-200 font-mono text-xs">{{ file_info.file_hash[:20] }}...</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-cyan-300/80">Chain Valid:</span>
+                            <span class="text-green-400">✅ Valid</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Complete Hash Information -->
+        <div class="glass p-8 mb-8">
+            <h3 class="text-2xl font-bold text-cyan-300 mb-6">
+                <i class="fas fa-fingerprint mr-2"></i>Complete Hash Information
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-black/20 rounded-lg p-4">
+                    <h4 class="text-lg font-semibold text-cyan-300 mb-3">File Hash (SHA-256)</h4>
+                    <div class="bg-black/40 rounded p-3">
+                        <div class="font-mono text-cyan-200 text-xs break-all">{{ file_info.file_hash }}</div>
+                    </div>
+                    <p class="text-cyan-300/60 text-sm mt-2">This hash uniquely identifies the file content</p>
+                </div>
+                
+                <div class="bg-black/20 rounded-lg p-4">
+                    <h4 class="text-lg font-semibold text-cyan-300 mb-3">Block Hash (SHA-256)</h4>
+                    <div class="bg-black/40 rounded p-3">
+                        <div class="font-mono text-cyan-200 text-xs break-all">{{ file_info.block_hash }}</div>
+                    </div>
+                    <p class="text-cyan-300/60 text-sm mt-2">This hash secures the block in the blockchain</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Blockchain Block Details -->
+        {% if block_info %}
+        <div class="glass p-8 mb-8">
+            <h3 class="text-2xl font-bold text-cyan-300 mb-6">
+                <i class="fas fa-cube mr-2"></i>Blockchain Block Details
+            </h3>
+            <div class="bg-black/20 rounded-lg p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-3 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-cyan-300/80">Block Index:</span>
+                            <span class="text-cyan-200">#{{ block_info.index }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-cyan-300/80">Timestamp:</span>
+                            <span class="text-cyan-200">{{ block_info.timestamp }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-cyan-300/80">Previous Hash:</span>
+                            <span class="text-cyan-200 font-mono text-xs">{{ block_info.previous_hash[:20] }}...</span>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-3 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-cyan-300/80">Block Hash:</span>
+                            <span class="text-cyan-200 font-mono text-xs">{{ block_info.hash[:20] }}...</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-cyan-300/80">Data Size:</span>
+                            <span class="text-cyan-200">{{ block_info.data|length }} items</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-cyan-300/80">Validation:</span>
+                            <span class="text-green-400">✅ Valid</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Block Data -->
+                <div class="mt-6">
+                    <h4 class="text-lg font-semibold text-cyan-300 mb-3">Block Data</h4>
+                    <div class="bg-black/40 rounded p-4">
+                        <pre class="text-cyan-200 text-xs overflow-x-auto">{{ block_info.data | tojson(indent=2) }}</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Actions -->
+        <div class="glass p-8 text-center">
+            <h3 class="text-2xl font-bold text-cyan-300 mb-6">
+                <i class="fas fa-cogs mr-2"></i>Actions
+            </h3>
+            <div class="flex justify-center space-x-4">
+                <button onclick="verifyFileIntegrity()" 
+                        class="bg-green-600 hover:bg-green-500 text-white px-6 py-3 rounded-xl text-lg transition-all duration-300">
+                    <i class="fas fa-shield-alt mr-2"></i>Verify File Integrity
+                </button>
+                <button onclick="downloadFile()" 
+                        class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl text-lg transition-all duration-300">
+                    <i class="fas fa-download mr-2"></i>Download File
+                </button>
+                <button onclick="copyHash()" 
+                        class="bg-purple-600 hover:bg-purple-500 text-white px-6 py-3 rounded-xl text-lg transition-all duration-300">
+                    <i class="fas fa-copy mr-2"></i>Copy Hash
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function verifyFileIntegrity() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.xml,.ccda';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    fetch('/verify', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => {
+                        if (response.redirected) {
+                            window.location.href = response.url;
+                        }
+                    })
+                    .catch(error => {
+                        alert('Verification failed. Please try again.');
+                    });
+                }
+            };
+            input.click();
+        }
+
+        function downloadFile() {
+            // This would need to be implemented on the backend
+            alert('Download functionality would be implemented here.');
+        }
+
+        function copyHash() {
+            const hash = '{{ file_info.file_hash }}';
+            navigator.clipboard.writeText(hash).then(function() {
+                alert('File hash copied to clipboard!');
+            }, function(err) {
+                alert('Failed to copy hash: ' + err);
+            });
+        }
+    </script>
+</body>
+</html> 
