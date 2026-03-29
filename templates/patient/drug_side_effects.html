@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Drug Side Effects - MediChain{% endblock %}
+
+{% block extra_css %}
+<style>
+    .search-box {
+        margin-bottom: 2rem;
+    }
+    
+    .search-box input {
+        width: 100%;
+        padding: 0.8rem;
+        font-size: 1rem;
+        border: 2px solid #ddd;
+        border-radius: 4px;
+    }
+    
+    .drug-info {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+        display: none;
+    }
+    
+    .drug-info.show {
+        display: block;
+    }
+    
+    .side-effects-list {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .side-effect-item {
+        background: #f9f9f9;
+        padding: 0.8rem;
+        border-radius: 4px;
+        border-left: 3px solid #3498db;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>⚠️ Drug Side Effects Database</h2>
+    <p style="color: #666; margin-top: 0.5rem;">Check side effects and warnings for your medications</p>
+</div>
+
+<div class="card">
+    <div class="search-box">
+        <input type="text" id="drugSearch" placeholder="Search drug name (e.g., Amlong, Metformin, Aspirin)..." onkeyup="searchDrug()">
+    </div>
+    
+    <div id="drugInfo" class="drug-info">
+        <h3 id="drugName"></h3>
+        <p id="drugType" style="color: #666; margin-top: 0.5rem;"></p>
+        
+        <div style="margin-top: 1.5rem;">
+            <h4>Common Side Effects:</h4>
+            <div id="commonSideEffects" class="side-effects-list"></div>
+        </div>
+        
+        <div style="margin-top: 1.5rem;">
+            <h4>Serious Side Effects:</h4>
+            <div id="seriousSideEffects" class="side-effects-list"></div>
+        </div>
+    </div>
+    
+    <div id="noResults" style="text-align: center; padding: 2rem; color: #999;">
+        <p>Search for a drug to see side effects</p>
+    </div>
+</div>
+{% endblock %}
+
+<script>
+function searchDrug() {
+    const searchTerm = document.getElementById('drugSearch').value.trim();
+    
+    if (!searchTerm) {
+        document.getElementById('drugInfo').classList.remove('show');
+        document.getElementById('noResults').style.display = 'block';
+        return;
+    }
+    
+    fetch('/api/patient/get-drug-info', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({drug_name: searchTerm})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const drug = data.drug;
+            document.getElementById('drugName').textContent = drug.name;
+            document.getElementById('drugType').textContent = drug.type;
+            
+            document.getElementById('commonSideEffects').innerHTML = 
+                drug.common_side_effects.map(e => `<div class="side-effect-item">✓ ${e}</div>`).join('');
+            
+            document.getElementById('seriousSideEffects').innerHTML = 
+                drug.serious_side_effects.map(e => `<div class="side-effect-item" style="border-left-color: #d9534f;">⚠️ ${e}</div>`).join('');
+            
+            document.getElementById('drugInfo').classList.add('show');
+            document.getElementById('noResults').style.display = 'none';
+        } else {
+            document.getElementById('drugInfo').classList.remove('show');
+            document.getElementById('noResults').innerHTML = '<p style="color: #d9534f;">❌ Drug not found</p>';
+            document.getElementById('noResults').style.display = 'block';
+        }
+    });
+}
+</script>

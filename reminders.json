@@ -1,0 +1,52 @@
+[
+  {
+    "id": "483985a0-f13a-49ed-b6d5-bb5db5097353",
+    "patient_id": "patient1",
+    "medication": "Amlong",
+    "dosage": "5mg",
+    "frequency": "Once daily",
+    "times": [
+      "08:00"
+    ],
+    "status": "active",
+    "created_at": "2026-02-23T00:50:21.287543"
+  },
+  {
+    "id": "9ee1f3e8-1780-4447-ab05-0924b8a8bb29",
+    "patient_id": "patient1",
+    "medication": "Metformin",
+    "dosage": "500mg",
+    "frequency": "Twice daily",
+    "times": [
+      "08:00",
+      "20:00"
+    ],
+    "status": "active",
+    "created_at": "2026-02-23T00:50:21.290548"
+  },
+  {
+    "id": "7fb66eb9-49ec-4fff-99fa-7ecb3df4702a",
+    "patient_id": "patient1",
+    "medication": "Amlong",
+    "dosage": "5mg",
+    "frequency": "Once daily",
+    "times": [
+      "08:00"
+    ],
+    "status": "active",
+    "created_at": "2026-02-23T01:21:47.685053"
+  },
+  {
+    "id": "c69f845e-bc37-43e8-a9b1-5a804530cb5d",
+    "patient_id": "patient1",
+    "medication": "Metformin",
+    "dosage": "500mg",
+    "frequency": "Twice daily",
+    "times": [
+      "08:00",
+      "20:00"
+    ],
+    "status": "active",
+    "created_at": "2026-02-23T01:21:47.690070"
+  }
+]

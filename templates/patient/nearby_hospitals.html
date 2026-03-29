@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block title %}Nearby Hospitals & Pharmacies - Senior Care App{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <h2>🏥 Nearby Hospitals & Pharmacies</h2>
+        <p class="text-muted">Find emergency services, hospitals, and pharmacies near you</p>
+        
+        <button class="btn btn-primary btn-lg" onclick="findNearbyHospitals()" style="width: 100%; margin-bottom: 20px;">
+            📍 Find Nearby Hospitals
+        </button>
+        
+        <div id="hospitalsContainer" style="display:none;">
+            <div id="hospitalsList" class="hospitals-list">
+                <!-- Hospitals will be loaded here -->
+            </div>
+        </div>
+        
+        <div id="loadingSpinner" style="display:none; text-align: center; padding: 40px;">
+            <p>Loading nearby hospitals...</p>
+        </div>
+    </div>
+    
+    <div class="card" style="margin-top: 20px;">
+        <h3>Emergency Services</h3>
+        <div class="emergency-services">
+            <div class="service-card">
+                <h4>🚑 Ambulance</h4>
+                <p class="phone">102</p>
+                <p>24/7 Emergency Ambulance Service</p>
+            </div>
+            <div class="service-card">
+                <h4>🚨 Police</h4>
+                <p class="phone">100</p>
+                <p>Emergency Police Service</p>
+            </div>
+            <div class="service-card">
+                <h4>🔥 Fire</h4>
+                <p class="phone">101</p>
+                <p>Fire and Rescue Service</p>
+            </div>
+            <div class="service-card">
+                <h4>☎️ Disaster Management</h4>
+                <p class="phone">108</p>
+                <p>Unified Emergency Response</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card" style="margin-top: 20px;">
+        <h3>Government Health Schemes</h3>
+        <div class="schemes-list">
+            <div class="scheme-card">
+                <h4>Ayushman Bharat (PMJAY)</h4>
+                <p>Free health insurance up to ₹5 lakhs for eligible families</p>
+                <p class="phone">1800-180-1111</p>
+            </div>
+            <div class="scheme-card">
+                <h4>Senior Citizen Health Insurance</h4>
+                <p>Special health insurance schemes for senior citizens</p>
+                <p class="phone">1800-180-1111</p>
+            </div>
+            <div class="scheme-card">
+                <h4>ESIC (Employee State Insurance)</h4>
+                <p>Health and disability benefits for workers</p>
+                <p class="phone">1800-180-1111</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.hospitals-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+}
+
+.hospital-card {
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.hospital-card h4 {
+    margin: 0 0 10px 0;
+    font-size: 18px;
+}
+
+.hospital-info {
+    display: grid;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.hospital-info p {
+    margin: 0;
+}
+
+.hospital-info strong {
+    color: #fff;
+}
+
+.hospital-type {
+    display: inline-block;
+    padding: 4px 8px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 4px;
+    font-size: 12px;
+    margin-top: 10px;
+}
+
+.hospital-rating {
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+.stars {
+    color: #ffc107;
+}
+
+.emergency-services {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.service-card {
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #ff6b6b;
+    text-align: center;
+}
+
+.service-card h4 {
+    margin: 0 0 10px 0;
+    font-size: 18px;
+}
+
+.service-card .phone {
+    font-size: 24px;
+    font-weight: bold;
+    color: #ff6b6b;
+    margin: 10px 0;
+}
+
+.service-card p {
+    margin: 5px 0;
+    font-size: 14px;
+    color: #666;
+}
+
+.schemes-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.scheme-card {
+    padding: 20px;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    border-radius: 8px;
+}
+
+.scheme-card h4 {
+    margin: 0 0 10px 0;
+}
+
+.scheme-card p {
+    margin: 8px 0;
+    font-size: 14px;
+}
+
+.scheme-card .phone {
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+@media (max-width: 768px) {
+    .emergency-services {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .schemes-list {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+function findNearbyHospitals() {
+    document.getElementById('loadingSpinner').style.display = 'block';
+    document.getElementById('hospitalsContainer').style.display = 'none';
+    
+    if (!navigator.geolocation) {
+        alert('Geolocation not supported. Showing default hospitals.');
+        loadHospitals();
+        return;
+    }
+    
+    navigator.geolocation.getCurrentPosition(
+        function(position) {
+            loadHospitals(position.coords.latitude, position.coords.longitude);
+        },
+        function(error) {
+            console.log('Geolocation error:', error);
+            loadHospitals();
+        }
+    );
+}
+
+function loadHospitals(latitude, longitude) {
+    fetch('/api/patient/get-nearby-hospitals', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            latitude: latitude || 28.7041,
+            longitude: longitude || 77.1025
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            displayHospitals(data.hospitals);
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => console.error('Error:', error))
+    .finally(() => {
+        document.getElementById('loadingSpinner').style.display = 'none';
+    });
+}
+
+function displayHospitals(hospitals) {
+    const list = document.getElementById('hospitalsList');
+    
+    list.innerHTML = hospitals.map(hospital => `
+        <div class="hospital-card">
+            <h4>${hospital.name}</h4>
+            <div class="hospital-info">
+                <p><strong>Type:</strong> ${hospital.type}</p>
+                <p><strong>Distance:</strong> ${hospital.distance}</p>
+                <p><strong>Phone:</strong> 📞 ${hospital.phone}</p>
+                <p><strong>Address:</strong> ${hospital.address}</p>
+                ${hospital.emergency ? '<p><strong>✓ Emergency Services Available</strong></p>' : ''}
+                <div class="hospital-rating">
+                    <span class="stars">${'★'.repeat(Math.floor(hospital.rating))}</span>
+                    <span>${hospital.rating}/5</span>
+                </div>
+            </div>
+            <button class="btn btn-sm" onclick="callHospital('${hospital.phone}')" style="margin-top: 10px; width: 100%;">
+                📞 Call Hospital
+            </button>
+        </div>
+    `).join('');
+    
+    document.getElementById('hospitalsContainer').style.display = 'block';
+}
+
+function callHospital(phone) {
+    window.location.href = `tel:${phone}`;
+}
+</script>
+{% endblock %}

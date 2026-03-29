@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block title %}Family Members - Senior Care App{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <h2>👨‍👩‍👧‍👦 Family Members</h2>
+        <p class="text-muted">Manage family members who can access your health information</p>
+        
+        <button class="btn btn-primary" onclick="showAddForm()">+ Add Family Member</button>
+        
+        <div id="addForm" style="display:none; margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+            <h3>Add New Family Member</h3>
+            <form id="familyForm">
+                <div class="form-group">
+                    <label>Name *</label>
+                    <input type="text" id="name" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Relationship *</label>
+                    <select id="relationship" class="form-control" required>
+                        <option value="">Select Relationship</option>
+                        <option value="Son">Son</option>
+                        <option value="Daughter">Daughter</option>
+                        <option value="Wife">Wife</option>
+                        <option value="Husband">Husband</option>
+                        <option value="Brother">Brother</option>
+                        <option value="Sister">Sister</option>
+                        <option value="Grandson">Grandson</option>
+                        <option value="Granddaughter">Granddaughter</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Phone Number *</label>
+                    <input type="tel" id="phone" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="email" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label>Permissions</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" value="view_medicines" checked> View Medicines</label>
+                        <label><input type="checkbox" value="view_health_status" checked> View Health Status</label>
+                        <label><input type="checkbox" value="view_appointments"> View Appointments</label>
+                        <label><input type="checkbox" value="add_notes"> Add Notes</label>
+                    </div>
+                </div>
+                
+                <button type="button" class="btn btn-success" onclick="addFamilyMember()">Add Member</button>
+                <button type="button" class="btn btn-secondary" onclick="hideAddForm()">Cancel</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card" style="margin-top: 20px;">
+        <h3>Current Family Members</h3>
+        {% if family_members %}
+            <div class="family-list">
+                {% for member in family_members %}
+                <div class="family-card">
+                    <div class="family-info">
+                        <h4>{{ member.name }}</h4>
+                        <p><strong>Relationship:</strong> {{ member.relationship }}</p>
+                        <p><strong>Phone:</strong> 📞 {{ member.phone }}</p>
+                        {% if member.email %}
+                        <p><strong>Email:</strong> {{ member.email }}</p>
+                        {% endif %}
+                        <p><strong>Permissions:</strong> {{ member.permissions|join(', ') }}</p>
+                    </div>
+                    <button class="btn btn-danger btn-sm" onclick="deleteFamilyMember('{{ member.id }}')">Remove</button>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted">No family members added yet. Add one to share your health information.</p>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.checkbox-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 0;
+}
+
+.family-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+}
+
+.family-card {
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #3498db;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.family-info h4 {
+    margin: 0 0 10px 0;
+    color: #2c3e50;
+}
+
+.family-info p {
+    margin: 5px 0;
+    font-size: 14px;
+}
+
+.btn-sm {
+    padding: 8px 12px;
+    font-size: 14px;
+}
+
+@media (max-width: 768px) {
+    .family-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .checkbox-group {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+function showAddForm() {
+    document.getElementById('addForm').style.display = 'block';
+}
+
+function hideAddForm() {
+    document.getElementById('addForm').style.display = 'none';
+    document.getElementById('familyForm').reset();
+}
+
+function addFamilyMember() {
+    const name = document.getElementById('name').value;
+    const relationship = document.getElementById('relationship').value;
+    const phone = document.getElementById('phone').value;
+    const email = document.getElementById('email').value;
+    
+    const permissions = [];
+    document.querySelectorAll('.checkbox-group input:checked').forEach(checkbox => {
+        permissions.push(checkbox.value);
+    });
+    
+    if (!name || !relationship || !phone) {
+        alert('Please fill in all required fields');
+        return;
+    }
+    
+    fetch('/api/patient/add-family-member', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            name: name,
+            relationship: relationship,
+            phone: phone,
+            email: email,
+            permissions: permissions
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Family member added successfully!');
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function deleteFamilyMember(memberId) {
+    if (confirm('Are you sure you want to remove this family member?')) {
+        fetch(`/api/patient/delete-family-member/${memberId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Family member removed');
+                location.reload();
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+}
+</script>
+{% endblock %}

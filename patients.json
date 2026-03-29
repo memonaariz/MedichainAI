@@ -1,0 +1,43 @@
+{
+  "patient1": {
+    "id": "patient1",
+    "name": "Rajesh Kumar",
+    "age": 65,
+    "phone": "9876543210",
+    "allergies": [
+      "Penicillin",
+      "Aspirin"
+    ],
+    "medical_history": [
+      "Diabetes",
+      "Hypertension"
+    ],
+    "qr_code": "PATIENT_patient1_QR"
+  },
+  "memon": {
+    "id": "memon",
+    "name": "aariz",
+    "age": 21,
+    "phone": "8097232313",
+    "email": "vellabrother13@gmail.com",
+    "blood_group": "AB+",
+    "allergies": [
+      "Penicillin",
+      "Ibuprofen"
+    ],
+    "medical_history": [
+      "Diabetes",
+      "Hypertension"
+    ],
+    "current_conditions": [
+      "Diabetes",
+      "Hypertension"
+    ],
+    "qr_code": "PATIENT_memon_QR",
+    "insurance_id": "sasqqwqeewe",
+    "insurance_provider": "Aditya Birla",
+    "emergency_contact_name": "chandu",
+    "emergency_contact_phone": "9897889880",
+    "created_at": "2026-03-30T02:17:11.789233"
+  }
+}

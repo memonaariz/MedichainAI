@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}Caregiver Management - Senior Care App{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <h2>👩‍⚕️ Caregiver Management</h2>
+        <p class="text-muted">Manage caregivers and nurses who help with your health</p>
+        
+        <button class="btn btn-primary" onclick="showAddForm()">+ Add Caregiver</button>
+        
+        <div id="addForm" style="display:none; margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+            <h3>Add New Caregiver</h3>
+            <form id="caregiverForm">
+                <div class="form-group">
+                    <label>Name *</label>
+                    <input type="text" id="name" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Phone Number *</label>
+                    <input type="tel" id="phone" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="email" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label>Qualification *</label>
+                    <select id="qualification" class="form-control" required>
+                        <option value="">Select Qualification</option>
+                        <option value="Nurse">Nurse (ANM/GNM)</option>
+                        <option value="Nursing Assistant">Nursing Assistant</option>
+                        <option value="Health Worker">Health Worker</option>
+                        <option value="Caregiver">Caregiver</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Availability *</label>
+                    <select id="availability" class="form-control" required>
+                        <option value="">Select Availability</option>
+                        <option value="Full-time">Full-time</option>
+                        <option value="Part-time">Part-time</option>
+                        <option value="Weekends">Weekends</option>
+                        <option value="On-call">On-call</option>
+                    </select>
+                </div>
+                
+                <button type="button" class="btn btn-success" onclick="addCaregiver()">Add Caregiver</button>
+                <button type="button" class="btn btn-secondary" onclick="hideAddForm()">Cancel</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card" style="margin-top: 20px;">
+        <h3>Current Caregivers</h3>
+        {% if caregivers %}
+            <div class="caregiver-list">
+                {% for caregiver in caregivers %}
+                <div class="caregiver-card">
+                    <div class="caregiver-info">
+                        <h4>{{ caregiver.name }}</h4>
+                        <p><strong>Qualification:</strong> {{ caregiver.qualification }}</p>
+                        <p><strong>Phone:</strong> 📞 {{ caregiver.phone }}</p>
+                        {% if caregiver.email %}
+                        <p><strong>Email:</strong> {{ caregiver.email }}</p>
+                        {% endif %}
+                        <p><strong>Availability:</strong> {{ caregiver.availability }}</p>
+                        <p><strong>Permissions:</strong> {{ caregiver.permissions|join(', ') }}</p>
+                    </div>
+                    <button class="btn btn-danger btn-sm" onclick="deleteCaregiver('{{ caregiver.id }}')">Remove</button>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted">No caregivers added yet. Add one to get help with your health management.</p>
+        {% endif %}
+    </div>
+    
+    <div class="card" style="margin-top: 20px;">
+        <h3>Caregiver Permissions</h3>
+        <div class="permissions-info">
+            <div class="permission-item">
+                <strong>✓ Mark Medicines Taken</strong>
+                <p>Caregiver can mark when you've taken your medicines</p>
+            </div>
+            <div class="permission-item">
+                <strong>✓ Update Health Status</strong>
+                <p>Caregiver can update your health metrics and status</p>
+            </div>
+            <div class="permission-item">
+                <strong>✓ Add Notes</strong>
+                <p>Caregiver can add notes about your health</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.caregiver-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+}
+
+.caregiver-card {
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.caregiver-info h4 {
+    margin: 0 0 10px 0;
+    color: #2c3e50;
+}
+
+.caregiver-info p {
+    margin: 5px 0;
+    font-size: 14px;
+}
+
+.btn-sm {
+    padding: 8px 12px;
+    font-size: 14px;
+}
+
+.permissions-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.permission-item {
+    padding: 15px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 8px;
+}
+
+.permission-item strong {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.permission-item p {
+    margin: 0;
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+@media (max-width: 768px) {
+    .caregiver-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .permissions-info {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+function showAddForm() {
+    document.getElementById('addForm').style.display = 'block';
+}
+
+function hideAddForm() {
+    document.getElementById('addForm').style.display = 'none';
+    document.getElementById('caregiverForm').reset();
+}
+
+function addCaregiver() {
+    const name = document.getElementById('name').value;
+    const phone = document.getElementById('phone').value;
+    const email = document.getElementById('email').value;
+    const qualification = document.getElementById('qualification').value;
+    const availability = document.getElementById('availability').value;
+    
+    if (!name || !phone || !qualification || !availability) {
+        alert('Please fill in all required fields');
+        return;
+    }
+    
+    fetch('/api/patient/add-caregiver', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            name: name,
+            phone: phone,
+            email: email,
+            qualification: qualification,
+            availability: availability
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Caregiver added successfully!');
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function deleteCaregiver(caregiverId) {
+    if (confirm('Are you sure you want to remove this caregiver?')) {
+        // Add delete endpoint if needed
+        alert('Caregiver removal feature coming soon');
+    }
+}
+</script>
+{% endblock %}

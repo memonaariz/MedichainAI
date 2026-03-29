@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Senior Care App{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Dashboard</h2>
+    <p style="margin-top: 1rem; font-size: 1.1rem;">
+        Hello, {{ user.name }}! Welcome to your dashboard.
+    </p>
+    
+    <div style="margin-top: 2rem;">
+        <h3>Quick Links:</h3>
+        <ul style="margin-top: 1rem; list-style: none;">
+            <li style="margin-bottom: 0.5rem;">
+                <a href="{{ url_for('profile') }}" class="btn">View Profile</a>
+            </li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

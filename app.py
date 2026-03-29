@@ -1,1303 +1,1376 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
-import hashlib
 import os
-import xml.etree.ElementTree as ET
-from datetime import datetime
 import json
-import time
+from datetime import datetime, timedelta
+import functools
+import uuid
+import base64
+from io import BytesIO
+import math
+import hashlib
 
-# Import custom modules
-try:
-    from blockchain import get_ultra_secure_blockchain
-    from medical_recommendations import get_medical_engine
-except ImportError:
-    # Create simple blockchain if module missing
-    class Block:
-        def __init__(self, index, timestamp, data, previous_hash):
-            self.index = index
-            self.timestamp = timestamp
-            self.data = data
-            self.previous_hash = previous_hash
-            self.hash = self.calculate_hash()
-
-        def calculate_hash(self):
-            block_string = json.dumps(self.__dict__, sort_keys=True)
-            return hashlib.sha256(block_string.encode()).hexdigest()
-
-    class Blockchain:
-        def __init__(self):
-            self.chain = []
-            self.create_genesis_block()
-
-        def create_genesis_block(self):
-            genesis_block = Block(0, time.time(), {"message": "Genesis Block"}, "0")
-            self.chain.append(genesis_block)
-
-        def get_latest_block(self):
-            return self.chain[-1]
-
-        def add_block(self, data):
-            previous_block = self.get_latest_block()
-            new_block = Block(previous_block.index + 1, time.time(), data, previous_block.hash)
-            self.chain.append(new_block)
-            return new_block
-
-        def is_chain_valid(self):
-            return True
-
-try:
-    from ccda_parser import parse_ccda_for_display
-except ImportError:
-    def parse_ccda_for_display(file_path):
-        return {
-            "patient": {"name": "John Doe", "dob": "1985-03-15"},
-            "medical": {"conditions": ["Diabetes"], "medications": ["Metformin"]},
-            "parsed_successfully": True
-        }
+# Import blockchain module
+from blockchain import (
+    get_blockchain_instance,
+    verify_data_integrity,
+    encrypt_sensitive_data
+)
 
 app = Flask(__name__, static_folder='static')
-app.secret_key = 'supersecretkey_for_demo_project_2025'
 
-# Initialize ultra-secure blockchain and medical engine
-try:
-    blockchain = get_ultra_secure_blockchain()
-    medical_engine = get_medical_engine()
-except:
-    blockchain = Blockchain()
-    medical_engine = None
+# Configuration
+app.secret_key = os.getenv('SECRET_KEY', 'medichain_secure_key_2025')
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=6)
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
-# Upload folder
+# Initialize blockchain
+blockchain = get_blockchain_instance()
+
+# File Paths
+USERS_FILE = 'users.json'
+PATIENTS_FILE = 'patients.json'
+PRESCRIPTIONS_FILE = 'prescriptions.json'
+REMINDERS_FILE = 'reminders.json'
+FAMILY_MEMBERS_FILE = 'family_members.json'
+CAREGIVERS_FILE = 'caregivers.json'
+APPOINTMENTS_FILE = 'appointments.json'
+HEALTH_METRICS_FILE = 'health_metrics.json'
+EMERGENCY_CONTACTS_FILE = 'emergency_contacts.json'
+NOTIFICATIONS_FILE = 'notifications.json'
+SOS_ALERTS_FILE = 'sos_alerts.json'
 UPLOAD_FOLDER = 'uploads'
+DRUG_SIDE_EFFECTS_FILE = 'drug_side_effects.json'
+ADHERENCE_TRACKING_FILE = 'adherence_tracking.json'
+LAB_REPORTS_FILE = 'lab_reports.json'
+TELEMEDICINE_FILE = 'telemedicine_appointments.json'
+DOCTOR_MESSAGES_FILE = 'doctor_messages.json'
+DRUG_SIDE_EFFECTS_FILE = 'drug_side_effects.json'
+ADHERENCE_TRACKING_FILE = 'adherence_tracking.json'
+LAB_REPORTS_FILE = 'lab_reports.json'
+TELEMEDICINE_FILE = 'telemedicine_appointments.json'
+DOCTOR_MESSAGES_FILE = 'doctor_messages.json'
+
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# File history storage
-HISTORY_FILE = 'file_history.json'
-def load_file_history():
+# Utility Functions
+def _load_json(path, default=None):
+    """Load JSON file safely"""
     try:
-        if os.path.exists(HISTORY_FILE):
-            with open(HISTORY_FILE, 'r') as f:
+        if os.path.exists(path):
+            with open(path, 'r', encoding='utf-8') as f:
                 return json.load(f)
-        return []
-    except:
-        return []
-
-def save_file_history(history):
-    try:
-        with open(HISTORY_FILE, 'w') as f:
-            json.dump(history, f, indent=2)
     except Exception as e:
-        print(f"Error saving file history: {e}")
+        print(f"Error reading {path}: {e}")
+    return default if default is not None else {}
 
-ALLOWED_EXTENSIONS = {'xml', 'ccda'}
+def _save_json(path, data):
+    """Save JSON file safely"""
+    try:
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"Error writing {path}: {e}")
 
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+def _append_json_array(path, item):
+    """Append item to JSON array"""
+    data = _load_json(path, [])
+    if not isinstance(data, list):
+        data = []
+    data.append(item)
+    _save_json(path, data)
 
+def init_data_files():
+    """Initialize all JSON data files"""
+    if not os.path.exists(USERS_FILE):
+        default_users = {
+            "admin": {"password": "admin123", "role": "admin", "name": "Administrator", "type": "admin"},
+            "doctor1": {"password": "doc123", "role": "doctor", "name": "Dr. Sharma", "type": "doctor", "clinic": "City Clinic", "phone": "9876543210"},
+            "patient1": {"password": "pat123", "role": "patient", "name": "Rajesh Kumar", "type": "patient", "age": 65, "phone": "9876543210", "allergies": ["Penicillin", "Aspirin"], "blood_group": "O+"},
+            "caregiver1": {"password": "care123", "role": "caregiver", "name": "Priya Sharma", "type": "caregiver", "assigned_patient": "patient1"}
+        }
+        _save_json(USERS_FILE, default_users)
+
+    if not os.path.exists(PATIENTS_FILE):
+        default_patients = {
+            "patient1": {
+                "id": "patient1",
+                "name": "Rajesh Kumar",
+                "age": 65,
+                "phone": "9876543210",
+                "email": "rajesh@example.com",
+                "blood_group": "O+",
+                "allergies": ["Penicillin", "Aspirin"],
+                "medical_history": ["Diabetes", "Hypertension"],
+                "current_conditions": ["Type 2 Diabetes", "Hypertension"],
+                "qr_code": "PATIENT_patient1_QR",
+                "insurance_id": "PMJAY123456",
+                "insurance_provider": "Ayushman Bharat"
+            }
+        }
+        _save_json(PATIENTS_FILE, default_patients)
+
+    for file_path in [FAMILY_MEMBERS_FILE, CAREGIVERS_FILE, APPOINTMENTS_FILE, 
+                      HEALTH_METRICS_FILE, EMERGENCY_CONTACTS_FILE, NOTIFICATIONS_FILE, 
+                      PRESCRIPTIONS_FILE, REMINDERS_FILE, SOS_ALERTS_FILE,
+                      DRUG_SIDE_EFFECTS_FILE, ADHERENCE_TRACKING_FILE, LAB_REPORTS_FILE,
+                      TELEMEDICINE_FILE, DOCTOR_MESSAGES_FILE]:
+        if not os.path.exists(file_path):
+            _save_json(file_path, [])
+
+init_data_files()
+
+# Decorators
+def login_required(view):
+    """Decorator to require login"""
+    @functools.wraps(view)
+    def wrapped_view(*args, **kwargs):
+        if not session.get('user'):
+            flash('Please log in to continue.')
+            return redirect(url_for('login'))
+        return view(*args, **kwargs)
+    return wrapped_view
+
+def role_required(*roles):
+    """Decorator to require specific role"""
+    def decorator(view):
+        @functools.wraps(view)
+        def wrapped_view(*args, **kwargs):
+            user = session.get('user')
+            if not user:
+                flash('Please log in to continue.')
+                return redirect(url_for('login'))
+            if user.get('role') not in roles:
+                flash('You do not have permission to access this page.')
+                return redirect(url_for('dashboard'))
+            return view(*args, **kwargs)
+        return wrapped_view
+    return decorator
+
+# Routes - Authentication
 @app.route('/')
 def index():
-    file_history = load_file_history()
-    return render_template('index.html', chain=blockchain.chain, file_history=file_history)
+    """Home page"""
+    user = session.get('user')
+    if user:
+        if user.get('role') == 'doctor':
+            return redirect(url_for('doctor_dashboard'))
+        elif user.get('role') == 'patient':
+            return redirect(url_for('patient_dashboard'))
+        elif user.get('role') == 'caregiver':
+            return redirect(url_for('caregiver_dashboard'))
+        else:
+            return redirect(url_for('dashboard'))
+    return render_template('index.html', user=user)
 
-@app.route('/upload', methods=['POST'])
-def upload_file():
-    if 'file' not in request.files:
-        flash('No file selected.')
-        return redirect(url_for('index'))
-
-    file = request.files['file']
-    if file.filename == '':
-        flash('No file selected.')
-        return redirect(url_for('index'))
-
-    if file and allowed_file(file.filename):
-        filename = file.filename
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
-
-        try:
-            with open(filepath, 'rb') as f:
-                file_content = f.read()
-            file_hash = hashlib.sha256(file_content).hexdigest()
-            
-            ccda_info = parse_ccda_for_display(filepath)
-            
-            # Check if parsing was successful
-            if not ccda_info.get('parsed_successfully', False):
-                error_message = ccda_info.get('error', 'Unknown error parsing CCDA file')
-                flash(f'Error: {error_message}')
-                return redirect(url_for('index'))
-            
-            block_data = {
-                "filename": filename,
-                "file_hash": file_hash,
-                "upload_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "ccda_summary": ccda_info
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Login page"""
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
+        
+        users = _load_json(USERS_FILE, {})
+        user = users.get(username)
+        
+        if user and user.get('password') == password:
+            session['user'] = {
+                'username': username,
+                'name': user.get('name', username),
+                'role': user.get('role', 'user'),
+                'type': user.get('type', 'user'),
+                'assigned_patient': user.get('assigned_patient')
             }
-
-            new_block = blockchain.add_block(block_data)
-            
-            # Store in session for immediate access
-            session['last_uploaded_hash'] = file_hash
-            session['last_uploaded_block_index'] = new_block.index
-            session['last_uploaded_filename'] = filename
-            session['ccda_info'] = ccda_info
-            
-            # Save to permanent file history
-            file_history = load_file_history()
-            file_history.append({
-                "filename": filename,
-                "file_hash": file_hash,
-                "block_index": new_block.index,
-                "block_hash": new_block.hash,
-                "upload_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "file_size": len(file_content),
-                "patient_name": ccda_info.get('patient', {}).get('name', 'Unknown'),
-                "status": "uploaded"
-            })
-            save_file_history(file_history)
-
-            flash(f'File "{filename}" uploaded successfully! Block Index: {new_block.index}, Hash: {file_hash[:16]}...')
+            flash(f"Welcome, {user.get('name', username)}!")
             return redirect(url_for('index'))
-
-        except Exception as e:
-            flash(f'Error processing file: {e}')
-            return redirect(url_for('index'))
-    else:
-        flash('Only XML and CCDA files are allowed.')
-        return redirect(url_for('index'))
-
-@app.route('/file_history')
-def file_history():
-    file_history = load_file_history()
-    return render_template('file_history.html', file_history=file_history, chain=blockchain.chain)
-
-@app.route('/view_file/<filename>')
-def view_file(filename):
-    file_history = load_file_history()
-    file_info = None
+        else:
+            flash('Invalid username or password.')
     
-    for entry in file_history:
-        if entry['filename'] == filename:
-            file_info = entry
-            break
-    
-    if not file_info:
-        flash('File not found in history.')
-        return redirect(url_for('index'))
-    
-    # Find the corresponding block
-    block_info = None
-    for block in blockchain.chain:
-        if block.index == file_info['block_index']:
-            block_info = block
-            break
-    
-    return render_template('view_file.html', file_info=file_info, block_info=block_info)
+    return render_template('login.html')
 
-@app.route('/verify', methods=['POST'])
-def verify_file():
-    if 'file' not in request.files:
-        flash('No file selected for verification.')
-        return redirect(url_for('index'))
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    """Patient registration page"""
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
+        confirm_password = request.form.get('confirm_password', '').strip()
+        
+        # Validation
+        if not username or not password:
+            flash('Username and password are required.')
+            return redirect(url_for('register'))
+        
+        if password != confirm_password:
+            flash('Passwords do not match.')
+            return redirect(url_for('register'))
+        
+        users = _load_json(USERS_FILE, {})
+        if username in users:
+            flash('Username already exists. Please choose another.')
+            return redirect(url_for('register'))
+        
+        # Get form data
+        full_name = request.form.get('full_name', '').strip()
+        age = request.form.get('age', '')
+        blood_group = request.form.get('blood_group', '')
+        phone = request.form.get('phone', '').strip()
+        email = request.form.get('email', '').strip()
+        allergies = request.form.getlist('allergies')
+        medical_history = request.form.getlist('medical_history')
+        current_medications = request.form.get('current_medications', '').strip()
+        insurance_provider = request.form.get('insurance_provider', '')
+        insurance_id = request.form.get('insurance_id', '').strip()
+        emergency_name = request.form.get('emergency_name', '').strip()
+        emergency_phone = request.form.get('emergency_phone', '').strip()
+        
+        # Create user
+        users[username] = {
+            'password': password,
+            'role': 'patient',
+            'name': full_name,
+            'type': 'patient',
+            'age': int(age) if age else 0,
+            'phone': phone,
+            'email': email,
+            'blood_group': blood_group,
+            'allergies': allergies,
+            'medical_history': medical_history,
+            'current_medications': current_medications,
+            'insurance_provider': insurance_provider,
+            'insurance_id': insurance_id,
+            'emergency_contact_name': emergency_name,
+            'emergency_contact_phone': emergency_phone,
+            'created_at': datetime.now().isoformat()
+        }
+        _save_json(USERS_FILE, users)
+        
+        # Create patient profile
+        patients = _load_json(PATIENTS_FILE, {})
+        patients[username] = {
+            'id': username,
+            'name': full_name,
+            'age': int(age) if age else 0,
+            'phone': phone,
+            'email': email,
+            'blood_group': blood_group,
+            'allergies': allergies,
+            'medical_history': medical_history,
+            'current_conditions': medical_history,
+            'qr_code': f'PATIENT_{username}_QR',
+            'insurance_id': insurance_id,
+            'insurance_provider': insurance_provider,
+            'emergency_contact_name': emergency_name,
+            'emergency_contact_phone': emergency_phone,
+            'created_at': datetime.now().isoformat()
+        }
+        _save_json(PATIENTS_FILE, patients)
+        
+        flash('Registration successful! Please log in with your credentials.')
+        return redirect(url_for('login'))
+    
+    return render_template('register.html')
 
-    file = request.files['file']
-    if file.filename == '':
-        flash('No file selected for verification.')
-        return redirect(url_for('index'))
+@app.route('/logout')
+def logout():
+    """Logout"""
+    session.clear()
+    flash('You have been logged out.')
+    return redirect(url_for('index'))
 
-    if file and allowed_file(file.filename):
-        filename = file.filename
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    """Admin dashboard"""
+    user = session.get('user', {})
+    return render_template('dashboard.html', user=user)
+
+@app.route('/profile')
+@login_required
+def profile():
+    """User profile page"""
+    user = session.get('user', {})
+    return render_template('profile.html', user=user)
+
+
+# Routes - Doctor
+@app.route('/doctor/dashboard')
+@login_required
+@role_required('doctor')
+def doctor_dashboard():
+    """Doctor dashboard"""
+    user = session.get('user', {})
+    return render_template('doctor/dashboard.html', user=user)
+
+@app.route('/doctor/scan-qr')
+@login_required
+@role_required('doctor')
+def doctor_scan_qr():
+    """Doctor scans patient QR code"""
+    return render_template('doctor/scan_qr.html', user=session.get('user'))
+
+@app.route('/api/doctor/patient/<patient_id>')
+@login_required
+@role_required('doctor')
+def api_get_patient(patient_id):
+    """Get patient details by ID"""
+    patients = _load_json(PATIENTS_FILE, {})
+    patient = patients.get(patient_id)
+    
+    if not patient:
+        return jsonify({'success': False, 'error': 'Patient not found'}), 404
+    
+    return jsonify({'success': True, 'patient': patient})
+
+@app.route('/doctor/write-prescription/<patient_id>')
+@login_required
+@role_required('doctor')
+def doctor_write_prescription(patient_id):
+    """Doctor writes prescription for patient"""
+    patients = _load_json(PATIENTS_FILE, {})
+    patient = patients.get(patient_id)
+    
+    if not patient:
+        flash('Patient not found.')
+        return redirect(url_for('doctor_dashboard'))
+    
+    return render_template('doctor/write_prescription.html', patient=patient, user=session.get('user'))
+
+@app.route('/api/doctor/save-prescription', methods=['POST'])
+@login_required
+@role_required('doctor')
+def api_save_prescription():
+    """Save prescription with blockchain verification"""
+    try:
+        data = request.get_json()
+        patient_id = data.get('patient_id')
+        medications = data.get('medications', [])
+        notes = data.get('notes', '')
+        
+        if not patient_id or not medications:
+            return jsonify({'success': False, 'error': 'Missing required fields'}), 400
+        
+        prescription = {
+            'id': str(uuid.uuid4()),
+            'patient_id': patient_id,
+            'doctor_id': session.get('user', {}).get('username'),
+            'doctor_name': session.get('user', {}).get('name'),
+            'medications': medications,
+            'notes': notes,
+            'created_at': datetime.now().isoformat(),
+            'status': 'active'
+        }
+        
+        # Add to blockchain for immutability
+        blockchain_hash = blockchain.add_prescription(
+            patient_id=patient_id,
+            doctor_id=prescription['doctor_id'],
+            prescription_data=prescription
+        )
+        
+        # Add blockchain hash to prescription
+        prescription['blockchain_hash'] = blockchain_hash
+        prescription['verified'] = True
+        
+        _append_json_array(PRESCRIPTIONS_FILE, prescription)
+        
+        return jsonify({
+            'success': True,
+            'prescription_id': prescription['id'],
+            'blockchain_hash': blockchain_hash,
+            'verified': True
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# Routes - Patient Dashboard & Core Features
+@app.route('/patient/dashboard')
+@login_required
+@role_required('patient')
+def patient_dashboard():
+    """Patient dashboard with blockchain stats"""
+    user = session.get('user', {})
+    patient_id = user.get('username')
+    
+    patients = _load_json(PATIENTS_FILE, {})
+    patient = patients.get(patient_id, {})
+    
+    prescriptions = _load_json(PRESCRIPTIONS_FILE, [])
+    patient_prescriptions = [p for p in prescriptions if p.get('patient_id') == patient_id]
+    
+    reminders = _load_json(REMINDERS_FILE, [])
+    patient_reminders = [r for r in reminders if r.get('patient_id') == patient_id]
+    
+    appointments = _load_json(APPOINTMENTS_FILE, [])
+    patient_appointments = [a for a in appointments if a.get('patient_id') == patient_id]
+    
+    refill_alerts = []
+    for reminder in patient_reminders:
+        if reminder.get('status') == 'active':
+            created_at = datetime.fromisoformat(reminder.get('created_at', datetime.now().isoformat()))
+            duration_days = int(reminder.get('duration', '30').split()[0]) if reminder.get('duration') else 30
+            refill_date = created_at + timedelta(days=duration_days-2)
+            
+            if datetime.now() >= refill_date:
+                refill_alerts.append({
+                    'medication': reminder.get('medication'),
+                    'dosage': reminder.get('dosage'),
+                    'refill_date': refill_date.isoformat()
+                })
+    
+    upcoming_appointments = [a for a in patient_appointments if a.get('status') == 'scheduled']
+    
+    # Get blockchain stats
+    blockchain_stats = blockchain.get_blockchain_stats()
+    
+    return render_template('patient/dashboard.html', 
+                         user=user, 
+                         patient=patient,
+                         prescriptions=patient_prescriptions,
+                         reminders=patient_reminders,
+                         refill_alerts=refill_alerts,
+                         upcoming_appointments=upcoming_appointments,
+                         blockchain_stats=blockchain_stats)
+
+@app.route('/patient/reminders')
+@login_required
+@role_required('patient')
+def patient_reminders():
+    """View patient reminders"""
+    user = session.get('user', {})
+    patient_id = user.get('username')
+    
+    reminders = _load_json(REMINDERS_FILE, [])
+    patient_reminders = [r for r in reminders if r.get('patient_id') == patient_id]
+    
+    return render_template('patient/reminders.html', reminders=patient_reminders, user=user)
+
+@app.route('/patient/prescriptions')
+@login_required
+@role_required('patient')
+def patient_prescriptions():
+    """View patient prescriptions"""
+    user = session.get('user', {})
+    patient_id = user.get('username')
+    
+    prescriptions = _load_json(PRESCRIPTIONS_FILE, [])
+    patient_prescriptions = [p for p in prescriptions if p.get('patient_id') == patient_id]
+    
+    return render_template('patient/prescriptions.html', prescriptions=patient_prescriptions, user=user)
+
+@app.route('/patient/snap-prescription')
+@login_required
+@role_required('patient')
+def patient_snap_prescription():
+    """Patient snaps prescription photo"""
+    return render_template('patient/snap_prescription.html', user=session.get('user'))
+
+@app.route('/api/patient/process-prescription', methods=['POST'])
+@login_required
+@role_required('patient')
+def api_process_prescription():
+    """Process prescription image with AI"""
+    try:
+        if 'image' not in request.files:
+            return jsonify({'success': False, 'error': 'No image provided'}), 400
+        
+        file = request.files['image']
+        patient_id = session.get('user', {}).get('username')
+        
+        filename = f"{patient_id}_{uuid.uuid4()}.jpg"
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(filepath)
+        
+        medications = extract_prescription_data(filepath)
+        
+        for med in medications:
+            reminder = {
+                'id': str(uuid.uuid4()),
+                'patient_id': patient_id,
+                'medication': med.get('name'),
+                'dosage': med.get('dosage'),
+                'frequency': med.get('frequency'),
+                'times': med.get('times', []),
+                'status': 'active',
+                'created_at': datetime.now().isoformat()
+            }
+            _append_json_array(REMINDERS_FILE, reminder)
+        
+        return jsonify({
+            'success': True,
+            'medications': medications,
+            'message': f'Found {len(medications)} medications. Reminders set!'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/patient/buy-medicine/<medicine_name>')
+@login_required
+@role_required('patient')
+def api_buy_medicine(medicine_name):
+    """Redirect to pharmacy to buy medicine"""
+    pharmacy_links = {
+        'amlong': 'https://www.1mg.com/search?name=amlong',
+        'metformin': 'https://www.1mg.com/search?name=metformin',
+        'aspirin': 'https://www.1mg.com/search?name=aspirin'
+    }
+    
+    link = pharmacy_links.get(medicine_name.lower(), f'https://www.1mg.com/search?name={medicine_name}')
+    return jsonify({'success': True, 'link': link})
+
+
+# Routes - Emergency SOS
+@app.route('/patient/emergency-sos')
+@login_required
+@role_required('patient')
+def patient_emergency_sos():
+    """Emergency SOS page"""
+    user = session.get('user', {})
+    patient_id = user.get('username')
+    
+    emergency_contacts = _load_json(EMERGENCY_CONTACTS_FILE, [])
+    patient_contacts = [c for c in emergency_contacts if c.get('patient_id') == patient_id]
+    
+    family_members = _load_json(FAMILY_MEMBERS_FILE, [])
+    patient_family = [f for f in family_members if f.get('patient_id') == patient_id]
+    
+    return render_template('patient/emergency_sos.html', 
+                         user=user, 
+                         emergency_contacts=patient_contacts,
+                         family_members=patient_family)
+
+@app.route('/api/patient/trigger-sos', methods=['POST'])
+@login_required
+@role_required('patient')
+def api_trigger_sos():
+    """Trigger emergency SOS alert"""
+    try:
+        user = session.get('user', {})
+        patient_id = user.get('username')
+        
+        patients = _load_json(PATIENTS_FILE, {})
+        patient = patients.get(patient_id, {})
+        
+        emergency_contacts = _load_json(EMERGENCY_CONTACTS_FILE, [])
+        patient_contacts = [c for c in emergency_contacts if c.get('patient_id') == patient_id]
+        
+        family_members = _load_json(FAMILY_MEMBERS_FILE, [])
+        patient_family = [f for f in family_members if f.get('patient_id') == patient_id]
+        
+        sos_alert = {
+            'id': str(uuid.uuid4()),
+            'patient_id': patient_id,
+            'patient_name': patient.get('name'),
+            'patient_phone': patient.get('phone'),
+            'location': request.json.get('location', 'Location not available'),
+            'message': request.json.get('message', 'Emergency SOS Alert'),
+            'timestamp': datetime.now().isoformat(),
+            'status': 'active',
+            'contacts_notified': []
+        }
+        
+        all_contacts = patient_contacts + patient_family
+        for contact in all_contacts:
+            notification = {
+                'id': str(uuid.uuid4()),
+                'type': 'emergency_sos',
+                'recipient_phone': contact.get('phone'),
+                'recipient_name': contact.get('name'),
+                'patient_name': patient.get('name'),
+                'message': f"🚨 EMERGENCY SOS from {patient.get('name')}! Location: {sos_alert['location']}",
+                'timestamp': datetime.now().isoformat(),
+                'status': 'pending'
+            }
+            _append_json_array(NOTIFICATIONS_FILE, notification)
+            sos_alert['contacts_notified'].append(contact.get('phone'))
+        
+        _append_json_array(SOS_ALERTS_FILE, sos_alert)
+        
+        return jsonify({
+            'success': True,
+            'message': f'SOS alert sent to {len(all_contacts)} contacts',
+            'alert_id': sos_alert['id']
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Routes - Family Members
+@app.route('/patient/family-members')
+@login_required
+@role_required('patient')
+def patient_family_members():
+    """Manage family members"""
+    user = session.get('user', {})
+    patient_id = user.get('username')
+    
+    family_members = _load_json(FAMILY_MEMBERS_FILE, [])
+    patient_family = [f for f in family_members if f.get('patient_id') == patient_id]
+    
+    return render_template('patient/family_members.html', 
+                         user=user, 
+                         family_members=patient_family)
+
+@app.route('/api/patient/add-family-member', methods=['POST'])
+@login_required
+@role_required('patient')
+def api_add_family_member():
+    """Add family member"""
+    try:
+        user = session.get('user', {})
+        patient_id = user.get('username')
+        data = request.get_json()
+        
+        family_member = {
+            'id': str(uuid.uuid4()),
+            'patient_id': patient_id,
+            'name': data.get('name'),
+            'relationship': data.get('relationship'),
+            'phone': data.get('phone'),
+            'email': data.get('email'),
+            'permissions': data.get('permissions', ['view_medicines', 'view_health_status']),
+            'added_at': datetime.now().isoformat()
+        }
+        
+        _append_json_array(FAMILY_MEMBERS_FILE, family_member)
+        
+        return jsonify({'success': True, 'family_member': family_member})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/patient/delete-family-member/<member_id>', methods=['DELETE'])
+@login_required
+@role_required('patient')
+def api_delete_family_member(member_id):
+    """Delete family member"""
+    try:
+        family_members = _load_json(FAMILY_MEMBERS_FILE, [])
+        family_members = [f for f in family_members if f.get('id') != member_id]
+        _save_json(FAMILY_MEMBERS_FILE, family_members)
+        
+        return jsonify({'success': True, 'message': 'Family member removed'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# Routes - Caregiver Management
+@app.route('/patient/caregiver-management')
+@login_required
+@role_required('patient')
+def patient_caregiver_management():
+    """Manage caregivers"""
+    user = session.get('user', {})
+    patient_id = user.get('username')
+    
+    caregivers = _load_json(CAREGIVERS_FILE, [])
+    patient_caregivers = [c for c in caregivers if c.get('patient_id') == patient_id]
+    
+    return render_template('patient/caregiver_management.html', 
+                         user=user, 
+                         caregivers=patient_caregivers)
+
+@app.route('/api/patient/add-caregiver', methods=['POST'])
+@login_required
+@role_required('patient')
+def api_add_caregiver():
+    """Add caregiver"""
+    try:
+        user = session.get('user', {})
+        patient_id = user.get('username')
+        data = request.get_json()
+        
+        caregiver = {
+            'id': str(uuid.uuid4()),
+            'patient_id': patient_id,
+            'name': data.get('name'),
+            'phone': data.get('phone'),
+            'email': data.get('email'),
+            'qualification': data.get('qualification'),
+            'availability': data.get('availability'),
+            'permissions': ['mark_medicines', 'update_health_status', 'add_notes'],
+            'added_at': datetime.now().isoformat()
+        }
+        
+        _append_json_array(CAREGIVERS_FILE, caregiver)
+        
+        return jsonify({'success': True, 'caregiver': caregiver})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Routes - Health Checkups
+@app.route('/patient/health-checkups')
+@login_required
+@role_required('patient')
+def patient_health_checkups():
+    """Health checkup scheduler"""
+    user = session.get('user', {})
+    patient_id = user.get('username')
+    
+    appointments = _load_json(APPOINTMENTS_FILE, [])
+    patient_appointments = [a for a in appointments if a.get('patient_id') == patient_id]
+    
+    return render_template('patient/health_checkups.html', 
+                         user=user, 
+                         appointments=patient_appointments)
+
+@app.route('/api/patient/schedule-appointment', methods=['POST'])
+@login_required
+@role_required('patient')
+def api_schedule_appointment():
+    """Schedule health checkup appointment"""
+    try:
+        user = session.get('user', {})
+        patient_id = user.get('username')
+        data = request.get_json()
+        
+        appointment = {
+            'id': str(uuid.uuid4()),
+            'patient_id': patient_id,
+            'doctor_name': data.get('doctor_name'),
+            'hospital_name': data.get('hospital_name'),
+            'appointment_date': data.get('appointment_date'),
+            'appointment_time': data.get('appointment_time'),
+            'appointment_type': data.get('appointment_type'),
+            'notes': data.get('notes'),
+            'status': 'scheduled',
+            'created_at': datetime.now().isoformat()
+        }
+        
+        _append_json_array(APPOINTMENTS_FILE, appointment)
+        
+        return jsonify({'success': True, 'appointment': appointment})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Routes - Health Tracking
+@app.route('/patient/health-tracking')
+@login_required
+@role_required('patient')
+def patient_health_tracking():
+    """Health metrics tracking"""
+    user = session.get('user', {})
+    patient_id = user.get('username')
+    
+    health_metrics = _load_json(HEALTH_METRICS_FILE, [])
+    patient_metrics = [m for m in health_metrics if m.get('patient_id') == patient_id]
+    
+    bp_readings = [m for m in patient_metrics if m.get('metric_type') == 'blood_pressure']
+    sugar_readings = [m for m in patient_metrics if m.get('metric_type') == 'blood_sugar']
+    weight_readings = [m for m in patient_metrics if m.get('metric_type') == 'weight']
+    
+    return render_template('patient/health_tracking.html', 
+                         user=user, 
+                         bp_readings=bp_readings,
+                         sugar_readings=sugar_readings,
+                         weight_readings=weight_readings)
+
+@app.route('/api/patient/add-health-metric', methods=['POST'])
+@login_required
+@role_required('patient')
+def api_add_health_metric():
+    """Add health metric reading"""
+    try:
+        user = session.get('user', {})
+        patient_id = user.get('username')
+        data = request.get_json()
+        
+        metric = {
+            'id': str(uuid.uuid4()),
+            'patient_id': patient_id,
+            'metric_type': data.get('metric_type'),
+            'value': data.get('value'),
+            'unit': data.get('unit'),
+            'notes': data.get('notes'),
+            'recorded_at': datetime.now().isoformat()
+        }
+        
+        _append_json_array(HEALTH_METRICS_FILE, metric)
+        
+        return jsonify({'success': True, 'metric': metric})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Routes - Medical History
+@app.route('/patient/medical-history')
+@login_required
+@role_required('patient')
+def patient_medical_history():
+    """View complete medical history"""
+    user = session.get('user', {})
+    patient_id = user.get('username')
+    
+    patients = _load_json(PATIENTS_FILE, {})
+    patient = patients.get(patient_id, {})
+    
+    prescriptions = _load_json(PRESCRIPTIONS_FILE, [])
+    patient_prescriptions = [p for p in prescriptions if p.get('patient_id') == patient_id]
+    
+    return render_template('patient/medical_history.html', 
+                         user=user, 
+                         patient=patient,
+                         prescriptions=patient_prescriptions)
+
+# Routes - Nearby Hospitals
+@app.route('/patient/nearby-hospitals')
+@login_required
+@role_required('patient')
+def patient_nearby_hospitals():
+    """Find nearby hospitals and pharmacies"""
+    return render_template('patient/nearby_hospitals.html', user=session.get('user'))
+
+@app.route('/api/patient/get-nearby-hospitals', methods=['POST'])
+@login_required
+@role_required('patient')
+def api_get_nearby_hospitals():
+    """Get nearby hospitals (mock data - integrate with Google Maps API)"""
+    try:
+        hospitals = [
+            {
+                'name': 'Apollo Hospitals',
+                'type': 'Private',
+                'distance': '2.5 km',
+                'phone': '1860-500-1066',
+                'address': 'Delhi, India',
+                'emergency': True,
+                'rating': 4.8
+            },
+            {
+                'name': 'Max Healthcare',
+                'type': 'Private',
+                'distance': '3.2 km',
+                'phone': '1800-180-1000',
+                'address': 'Delhi, India',
+                'emergency': True,
+                'rating': 4.7
+            },
+            {
+                'name': 'Government Medical College Hospital',
+                'type': 'Government',
+                'distance': '4.1 km',
+                'phone': '011-2658-8500',
+                'address': 'Delhi, India',
+                'emergency': True,
+                'rating': 4.2
+            }
+        ]
+        
+        return jsonify({'success': True, 'hospitals': hospitals})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Routes - Medicine Interaction Checker
+@app.route('/patient/medicine-interaction-checker')
+@login_required
+@role_required('patient')
+def patient_medicine_interaction_checker():
+    """Check medicine interactions"""
+    return render_template('patient/medicine_interaction_checker.html', user=session.get('user'))
+
+@app.route('/api/patient/check-medicine-interaction', methods=['POST'])
+@login_required
+@role_required('patient')
+def api_check_medicine_interaction():
+    """Check if medicines interact"""
+    try:
+        data = request.get_json()
+        medicines = data.get('medicines', [])
+        
+        interactions = {
+            ('Aspirin', 'Warfarin'): {'severity': 'HIGH', 'warning': 'Increased bleeding risk'},
+            ('Metformin', 'Alcohol'): {'severity': 'MEDIUM', 'warning': 'May cause lactic acidosis'},
+            ('Amlong', 'Grapefruit'): {'severity': 'MEDIUM', 'warning': 'Increases blood pressure medication effect'},
+        }
+        
+        warnings = []
+        for i in range(len(medicines)):
+            for j in range(i+1, len(medicines)):
+                med1 = medicines[i].lower()
+                med2 = medicines[j].lower()
+                
+                for (m1, m2), warning in interactions.items():
+                    if (med1 in m1.lower() or m1.lower() in med1) and (med2 in m2.lower() or m2.lower() in med2):
+                        warnings.append({
+                            'medicine1': medicines[i],
+                            'medicine2': medicines[j],
+                            'severity': warning['severity'],
+                            'warning': warning['warning']
+                        })
+        
+        return jsonify({'success': True, 'warnings': warnings})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Routes - Settings & Help
+@app.route('/patient/settings')
+@login_required
+@role_required('patient')
+def patient_settings():
+    """Patient settings"""
+    user = session.get('user', {})
+    patient_id = user.get('username')
+    
+    patients = _load_json(PATIENTS_FILE, {})
+    patient = patients.get(patient_id, {})
+    
+    return render_template('patient/settings.html', user=user, patient=patient)
+
+@app.route('/patient/help-support')
+@login_required
+@role_required('patient')
+def patient_help_support():
+    """Help and support page"""
+    return render_template('patient/help_support.html', user=session.get('user'))
+
+
+# Routes - Advanced Features
+
+# Drug Side Effects Database
+@app.route('/patient/drug-side-effects')
+@login_required
+@role_required('patient')
+def patient_drug_side_effects():
+    """View drug side effects database"""
+    return render_template('patient/drug_side_effects.html', user=session.get('user'))
+
+@app.route('/api/patient/get-drug-info', methods=['POST'])
+@login_required
+@role_required('patient')
+def api_get_drug_info():
+    """Get drug side effects and warnings"""
+    try:
+        data = request.get_json()
+        drug_name = data.get('drug_name', '').lower()
+
+        drug_database = {
+            'amlong': {
+                'name': 'Amlodipine (Amlong)',
+                'type': 'Blood Pressure Medication',
+                'common_side_effects': ['Swelling in feet/ankles', 'Headache', 'Dizziness', 'Fatigue'],
+                'serious_side_effects': ['Chest pain', 'Severe dizziness', 'Fainting'],
+                'interactions': ['Grapefruit juice', 'Simvastatin'],
+                'warnings': 'Do not stop suddenly. May cause rebound hypertension.',
+                'severity': 'MEDIUM'
+            },
+            'metformin': {
+                'name': 'Metformin',
+                'type': 'Diabetes Medication',
+                'common_side_effects': ['Nausea', 'Diarrhea', 'Stomach upset', 'Metallic taste'],
+                'serious_side_effects': ['Lactic acidosis (rare)', 'Vitamin B12 deficiency'],
+                'interactions': ['Alcohol', 'Contrast dye', 'Certain antibiotics'],
+                'warnings': 'Take with food. Monitor kidney function regularly.',
+                'severity': 'MEDIUM'
+            },
+            'aspirin': {
+                'name': 'Aspirin',
+                'type': 'Pain Reliever / Blood Thinner',
+                'common_side_effects': ['Stomach upset', 'Heartburn', 'Nausea'],
+                'serious_side_effects': ['Bleeding', 'Allergic reaction', 'Asthma attack'],
+                'interactions': ['Warfarin', 'NSAIDs', 'Alcohol'],
+                'warnings': 'Do not use if allergic. May increase bleeding risk.',
+                'severity': 'HIGH'
+            }
+        }
+
+        drug_info = drug_database.get(drug_name)
+        if drug_info:
+            return jsonify({'success': True, 'drug': drug_info})
+        else:
+            return jsonify({'success': False, 'error': 'Drug not found in database'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Medication Adherence Tracking
+@app.route('/patient/adherence-tracking')
+@login_required
+@role_required('patient')
+def patient_adherence_tracking():
+    """View medication adherence analytics"""
+    user = session.get('user', {})
+    patient_id = user.get('username')
+
+    reminders = _load_json(REMINDERS_FILE, [])
+    patient_reminders = [r for r in reminders if r.get('patient_id') == patient_id]
+
+    adherence_data = []
+    for reminder in patient_reminders:
+        taken_count = reminder.get('taken_count', 0)
+        total_days = (datetime.now() - datetime.fromisoformat(reminder.get('created_at', datetime.now().isoformat()))).days + 1
+        adherence_percentage = (taken_count / total_days * 100) if total_days > 0 else 0
+
+        adherence_data.append({
+            'medication': reminder.get('medication'),
+            'dosage': reminder.get('dosage'),
+            'taken_count': taken_count,
+            'total_days': total_days,
+            'adherence_percentage': round(adherence_percentage, 1),
+            'status': 'Good' if adherence_percentage >= 80 else 'Needs Improvement'
+        })
+
+    return render_template('patient/adherence_tracking.html', user=user, adherence_data=adherence_data)
+
+# Lab Reports Upload
+@app.route('/patient/lab-reports')
+@login_required
+@role_required('patient')
+def patient_lab_reports():
+    """Upload and view lab reports"""
+    user = session.get('user', {})
+    patient_id = user.get('username')
+
+    lab_reports = _load_json(LAB_REPORTS_FILE, [])
+    patient_reports = [r for r in lab_reports if r.get('patient_id') == patient_id]
+
+    return render_template('patient/lab_reports.html', user=user, lab_reports=patient_reports)
+
+@app.route('/api/patient/upload-lab-report', methods=['POST'])
+@login_required
+@role_required('patient')
+def api_upload_lab_report():
+    """Upload lab report"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'error': 'No file provided'}), 400
+
+        file = request.files['file']
+        patient_id = session.get('user', {}).get('username')
+
+        filename = f"lab_{patient_id}_{uuid.uuid4()}.pdf"
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
         file.save(filepath)
 
-        try:
-            with open(filepath, 'rb') as f:
-                current_file_content = f.read()
-            current_file_hash = hashlib.sha256(current_file_content).hexdigest()
+        report = {
+            'id': str(uuid.uuid4()),
+            'patient_id': patient_id,
+            'test_name': request.form.get('test_name', 'Lab Report'),
+            'test_date': request.form.get('test_date', datetime.now().isoformat()),
+            'file_path': filename,
+            'uploaded_at': datetime.now().isoformat()
+        }
 
-            original_hash = session.get('last_uploaded_hash')
-            block_index_to_check = session.get('last_uploaded_block_index')
-            original_filename = session.get('last_uploaded_filename')
+        _append_json_array(LAB_REPORTS_FILE, report)
 
-            if not original_hash or block_index_to_check is None:
-                flash('No previous upload found. Please upload a file first.')
-                return redirect(url_for('index'))
+        return jsonify({'success': True, 'report': report})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
-            found_block = None
-            for block in blockchain.chain:
-                if block.index == block_index_to_check and block.data.get('filename') == original_filename:
-                    found_block = block
-                    break
-            
-            if not found_block:
-                flash(f'Error: Original block for "{original_filename}" not found in blockchain.')
-                return redirect(url_for('index'))
+# Doctor-Patient Messaging
+@app.route('/patient/messages')
+@login_required
+@role_required('patient')
+def patient_messages():
+    """View messages from doctors"""
+    user = session.get('user', {})
+    patient_id = user.get('username')
 
-            stored_hash = found_block.data.get('file_hash')
+    messages = _load_json(DOCTOR_MESSAGES_FILE, [])
+    patient_messages = [m for m in messages if m.get('patient_id') == patient_id]
 
-            if current_file_hash == stored_hash:
-                flash(f'✅ Verification Successful! File "{filename}" has not been modified.')
-            else:
-                flash(f'❌ Verification FAILED! File "{filename}" has been modified.')
-            
-            if not blockchain.is_chain_valid():
-                flash('⚠️ WARNING: Blockchain integrity compromised!')
+    return render_template('patient/messages.html', user=user, messages=patient_messages)
 
-            return redirect(url_for('index'))
+@app.route('/api/patient/send-message', methods=['POST'])
+@login_required
+@role_required('patient')
+def api_send_message():
+    """Send message to doctor"""
+    try:
+        user = session.get('user', {})
+        patient_id = user.get('username')
+        data = request.get_json()
 
-        except Exception as e:
-            flash(f'Verification error: {e}')
-            return redirect(url_for('index'))
-    else:
-        flash('Only XML and CCDA files are allowed for verification.')
+        message = {
+            'id': str(uuid.uuid4()),
+            'patient_id': patient_id,
+            'patient_name': user.get('name'),
+            'doctor_id': data.get('doctor_id'),
+            'message': data.get('message'),
+            'sent_at': datetime.now().isoformat(),
+            'read': False
+        }
+
+        _append_json_array(DOCTOR_MESSAGES_FILE, message)
+
+        return jsonify({'success': True, 'message': message})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Telemedicine Appointment Booking
+@app.route('/patient/telemedicine')
+@login_required
+@role_required('patient')
+def patient_telemedicine():
+    """Book telemedicine appointments"""
+    user = session.get('user', {})
+    patient_id = user.get('username')
+
+    appointments = _load_json(TELEMEDICINE_FILE, [])
+    patient_appointments = [a for a in appointments if a.get('patient_id') == patient_id]
+
+    return render_template('patient/telemedicine.html', user=user, appointments=patient_appointments)
+
+@app.route('/api/patient/book-telemedicine', methods=['POST'])
+@login_required
+@role_required('patient')
+def api_book_telemedicine():
+    """Book telemedicine appointment"""
+    try:
+        user = session.get('user', {})
+        patient_id = user.get('username')
+        data = request.get_json()
+
+        appointment = {
+            'id': str(uuid.uuid4()),
+            'patient_id': patient_id,
+            'doctor_name': data.get('doctor_name'),
+            'appointment_date': data.get('appointment_date'),
+            'appointment_time': data.get('appointment_time'),
+            'reason': data.get('reason'),
+            'status': 'Scheduled',
+            'video_link': f'https://meet.medichain.local/{uuid.uuid4()}',
+            'booked_at': datetime.now().isoformat()
+        }
+
+        _append_json_array(TELEMEDICINE_FILE, appointment)
+
+        return jsonify({'success': True, 'appointment': appointment})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# Routes - Caregiver Dashboard
+@app.route('/caregiver/dashboard')
+@login_required
+@role_required('caregiver')
+def caregiver_dashboard():
+    """Caregiver dashboard"""
+    user = session.get('user', {})
+    assigned_patient_id = user.get('assigned_patient')
+    
+    if not assigned_patient_id:
+        flash('No patient assigned to you.')
         return redirect(url_for('index'))
+    
+    patients = _load_json(PATIENTS_FILE, {})
+    patient = patients.get(assigned_patient_id, {})
+    
+    reminders = _load_json(REMINDERS_FILE, [])
+    patient_reminders = [r for r in reminders if r.get('patient_id') == assigned_patient_id]
+    
+    health_metrics = _load_json(HEALTH_METRICS_FILE, [])
+    patient_metrics = [m for m in health_metrics if m.get('patient_id') == assigned_patient_id]
+    
+    return render_template('caregiver/dashboard.html', 
+                         user=user, 
+                         patient=patient,
+                         reminders=patient_reminders,
+                         metrics=patient_metrics)
 
-# AI Chat Route - Enhanced Conversational Medical Search
-@app.route('/ai_chat', methods=['POST'])
-def ai_chat():
+@app.route('/api/caregiver/mark-medicine-taken', methods=['POST'])
+@login_required
+@role_required('caregiver')
+def api_mark_medicine_taken():
+    """Mark medicine as taken"""
     try:
         data = request.get_json()
-        user_query = data.get('query', '').lower()
+        reminder_id = data.get('reminder_id')
         
-        # Get session context (previous conversation)
-        chat_history = session.get('chat_history', [])
-        
-        # Debug: Print session data
-        print(f"DEBUG - Session CCDA info: {session.get('ccda_info', 'Not found')}")
-        print(f"DEBUG - User query: {user_query}")
-        
-        # Enhanced conversational responses based on query analysis
-        response = generate_conversational_response(user_query, chat_history)
-        
-        # Update chat history
-        chat_history.append({"user": user_query, "ai": response})
-        if len(chat_history) > 10:  # Keep last 10 messages
-            chat_history = chat_history[-10:]
-        session['chat_history'] = chat_history
-        
-        return jsonify({"success": True, "response": response})
-    except Exception as e:
-        print(f"DEBUG - AI Chat Error: {str(e)}")
-        return jsonify({"success": False, "error": str(e)})
-
-def generate_conversational_response(query, chat_history):
-    """Generate intelligent conversational responses based on medical context"""
-    
-    # Check if we have uploaded CCDA data
-    ccda_info = session.get('ccda_info', {})
-    patient_data = ccda_info.get('patient', {})
-    medical_data = ccda_info.get('medical', {})
-    
-    print(f"DEBUG - Patient data: {patient_data}")
-    print(f"DEBUG - Medical data: {medical_data}")
-    print(f"DEBUG - Query: '{query}'")
-    
-    # Analyze query intent with more specific matching
-    query_lower = query.lower()
-    
-    # Check for specific keywords first
-    if 'medication' in query_lower or 'medicine' in query_lower or 'drug' in query_lower or 'pill' in query_lower or 'prescription' in query_lower or 'taking' in query_lower:
-        print("DEBUG - Detected medication query")
-        medications = medical_data.get('medications', [])
-        if medications and medications[0] != 'No medications found in document':
-            med_list = '\n'.join([f"• {med}" for med in medications])
-            return f"**Current Medications:**\n💊 {med_list}\n\nWould you like to know about drug interactions or side effects?"
-        else:
-            return "**Current Medications:**\n💊 No medications found in the current document.\n\nWould you like me to check for any medication history?"
-    
-    elif 'lab' in query_lower or 'test' in query_lower or 'result' in query_lower or 'blood' in query_lower or 'urine' in query_lower or 'analysis' in query_lower or 'findings' in query_lower:
-        print("DEBUG - Detected lab results query")
-        lab_results = medical_data.get('lab_results', [])
-        if lab_results and lab_results[0] != 'No lab results found in document':
-            lab_list = '\n'.join([f"• {result}" for result in lab_results])
-            return f"**Laboratory Results:**\n🔬 {lab_list}\n\nWould you like me to interpret these results or check for any abnormalities?"
-        else:
-            return "**Laboratory Results:**\n🔬 No lab results found in the current document.\n\nWould you like me to suggest relevant tests based on the patient's condition?"
-    
-    elif 'diagnosis' in query_lower or 'condition' in query_lower or 'problem' in query_lower or 'disease' in query_lower or 'illness' in query_lower or 'diagnoses' in query_lower:
-        print("DEBUG - Detected diagnosis query")
-        conditions = medical_data.get('conditions', [])
-        if conditions and conditions[0] != 'No conditions found in document':
-            cond_list = '\n'.join([f"• {cond}" for cond in conditions])
-            return f"**Medical Conditions:**\n🏥 {cond_list}"
-        else:
-            return "**Medical Conditions:**\n🏥 No specific conditions found in the current document.\n\nWould you like me to analyze the patient's overall health status?"
-    
-    elif 'vital' in query_lower or 'blood pressure' in query_lower or 'heart rate' in query_lower or 'temperature' in query_lower or 'pulse' in query_lower:
-        print("DEBUG - Detected vital signs query")
-        vitals = medical_data.get('vital_signs', [])
-        if vitals and vitals[0] != 'No vital signs found in document':
-            vital_list = '\n'.join([f"• {vital}" for vital in vitals])
-            return f"**Vital Signs:**\n❤️ {vital_list}\n\nWould you like me to assess if these are within normal ranges?"
-        else:
-            return "**Vital Signs:**\n❤️ No vital signs recorded in the current document.\n\nWould you like me to suggest which vitals should be monitored?"
-    
-    elif 'treatment' in query_lower or 'recommendation' in query_lower or 'advice' in query_lower or 'suggestion' in query_lower or 'what should' in query_lower:
-        print("DEBUG - Detected treatment query")
-        conditions = medical_data.get('conditions', [])
-        if conditions and conditions[0] != 'No conditions found in document':
-            recommendations = generate_treatment_recommendations(conditions)
-            return f"**Treatment Recommendations:**\n💡 {recommendations}\n\nWould you like more specific guidance for any condition?"
-        else:
-            return "**Treatment Recommendations:**\n💡 I don't have enough information to provide specific treatment recommendations. Please upload a CCDA document with patient conditions."
-    
-    elif 'risk' in query_lower or 'danger' in query_lower or 'complication' in query_lower or 'warning' in query_lower:
-        print("DEBUG - Detected risk assessment query")
-        risk_assessment = generate_risk_assessment(medical_data)
-        return f"**Risk Assessment:**\n⚠️ {risk_assessment}\n\nWould you like me to suggest preventive measures?"
-    
-    elif 'health' in query_lower or 'overall' in query_lower or 'summary' in query_lower or 'status' in query_lower:
-        print("DEBUG - Detected health summary query")
-        return generate_health_summary(patient_data, medical_data)
-    
-    # Patient information queries (check this last to avoid conflicts)
-    elif 'patient' in query_lower or 'name' in query_lower or 'who' in query_lower or 'person' in query_lower or 'details' in query_lower:
-        print("DEBUG - Detected patient info query")
-        if patient_data.get('name') and patient_data['name'] != 'Unknown':
-            return f"**Patient Information:**\n👤 **Name:** {patient_data['name']}\n📅 **Date of Birth:** {patient_data.get('dob', 'Not available')}\n⚧ **Gender:** {patient_data.get('gender', 'Not available')}\n\nIs there anything specific about the patient you'd like to know?"
-        else:
-            return "**Patient Information:**\n👤 I don't have patient information available. Please upload a CCDA document first to access patient details."
-    
-    # Follow-up Questions
-    elif 'why' in query_lower or 'how' in query_lower or 'what if' in query_lower or 'could you' in query_lower:
-        print("DEBUG - Detected follow-up query")
-        return "I'd be happy to help! Could you please be more specific about what you'd like to know? I can help with:\n• Patient information\n• Medications\n• Conditions\n• Lab results\n• Treatment recommendations\n• Risk assessments"
-    
-    # Default response with suggestions
-    else:
-        print("DEBUG - No specific query detected, showing default response")
-        return f"I understand you're asking about '{query}'. Here's what I can help you with:\n\n🔍 **Available Information:**\n• Patient details\n• Current medications\n• Medical conditions\n• Lab results\n• Vital signs\n• Treatment recommendations\n\nTry clicking one of the buttons above for instant information!"
-
-def generate_treatment_recommendations(conditions):
-    """Generate treatment recommendations based on conditions"""
-    recommendations = []
-    
-    for condition in conditions:
-        condition_lower = condition.lower()
-        if 'diabetes' in condition_lower:
-            recommendations.append("Monitor blood glucose regularly and maintain a balanced diet")
-        elif 'hypertension' in condition_lower or 'blood pressure' in condition_lower:
-            recommendations.append("Monitor blood pressure weekly and consider low-sodium diet")
-        elif 'heart' in condition_lower:
-            recommendations.append("Regular cardiac monitoring and lifestyle modifications")
-        else:
-            recommendations.append(f"Consult healthcare provider for {condition} management")
-    
-    return '\n'.join(recommendations) if recommendations else "Consult your healthcare provider for personalized treatment recommendations."
-
-def generate_risk_assessment(medical_data):
-    """Generate risk assessment based on medical data"""
-    conditions = medical_data.get('conditions', [])
-    medications = medical_data.get('medications', [])
-    
-    risk_factors = len(conditions) + len(medications)
-    
-    if risk_factors > 3:
-        return "Elevated risk profile - multiple conditions detected. Regular monitoring recommended."
-    elif risk_factors > 1:
-        return "Moderate risk profile - some conditions present. Standard monitoring advised."
-    else:
-        return "Low risk profile based on available data. Continue regular check-ups."
-
-def generate_health_summary(patient_data, medical_data):
-    """Generate overall health summary"""
-    summary = []
-    
-    if patient_data.get('name') and patient_data['name'] != 'Unknown':
-        summary.append(f"**Patient:** {patient_data['name']}")
-    
-    conditions = medical_data.get('conditions', [])
-    if conditions and conditions[0] != 'No conditions found in document':
-        summary.append(f"**Conditions:** {len(conditions)} active conditions")
-    
-    medications = medical_data.get('medications', [])
-    if medications and medications[0] != 'No medications found in document':
-        summary.append(f"**Medications:** {len(medications)} current medications")
-    
-    if not summary:
-        summary.append("Limited health information available. Please upload a complete CCDA document.")
-    
-    return '\n'.join(summary) + "\n\nWould you like detailed information about any specific aspect?"
-
-@app.route('/get_current_patient_data', methods=['GET'])
-def get_current_patient_data():
-    """Get current patient data from session for AI analysis"""
-    ccda_info = session.get('ccda_info', {})
-    
-    if not ccda_info or not ccda_info.get('parsed_successfully'):
-        return jsonify({
-            'success': False,
-            'message': 'No patient data available. Please upload a CCDA document first.'
-        })
-    
-    return jsonify({
-        'success': True,
-        'data': {
-            'patient': ccda_info.get('patient', {}),
-            'medical': ccda_info.get('medical', {})
-        }
-    })
-
-# Document Enrichment Route
-@app.route('/enrich_document', methods=['POST'])
-def enrich_document_route():
-    try:
-        print("Starting document enrichment process...")
-        
-        # Check if there's a last uploaded file in the session
-        if 'last_uploaded_filename' not in session:
-            print("No document found in session")
-            return jsonify({"success": False, "error": "No document has been uploaded yet. Please upload a CCDA document first.", "error_type": "no_upload"})
-        
-        filename = session['last_uploaded_filename']
-        print(f"Processing file: {filename}")
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        
-        # Check if the file exists
-        if not os.path.exists(filepath):
-            print(f"File not found: {filepath}")
-            return jsonify({"success": False, "error": f"File {filename} not found. Please upload the document again.", "error_type": "file_missing"})
-        
-        print(f"File exists, attempting to parse: {filepath}")
-        
-        # Try to use cached CCDA data from session if available
-        ccda_data = None
-        if 'ccda_info' in session and session.get('last_uploaded_hash') is not None:
-            print("Using cached CCDA data from session")
-            ccda_data = session.get('ccda_info')
-            
-            # Verify cached data is valid
-            if not ccda_data.get('parsed_successfully', False):
-                print("Cached data indicates parsing was not successful, will try parsing again")
-                ccda_data = None
-            else:
-                print("Using valid cached CCDA data")
-        
-        # If no cached data, parse the CCDA file
-        if ccda_data is None:
-            print("No cached data found, parsing CCDA file")
-            ccda_data = parse_ccda_for_display(filepath)
-        
-        # Check if parsing was successful
-        if not ccda_data.get('parsed_successfully', False):
-            error_message = ccda_data.get('error', 'Unknown parsing error')
-            print(f"Failed to parse document: {error_message}")
-            
-            # Return detailed error information
-            return jsonify({
-                "success": False, 
-                "error": f"Failed to parse CCDA document: {error_message}. Please try again with a valid CCDA file.", 
-                "error_type": "parsing_error",
-                "details": ccda_data.get('error_details', {})
-            })
-        
-        print("CCDA parsing successful, extracting data")
-        
-        # Get patient and medical data
-        patient = ccda_data.get('patient', {})
-        medical = ccda_data.get('medical', {})
-        
-        print(f"Patient data: {patient}")
-        print(f"Medical data: {medical}")
-        
-        # Create enriched data from the parsed CCDA
-        enriched_data = {
-            "extracted_data": {
-                "patient_name": patient.get('name', 'Unknown'),
-                "date_of_birth": patient.get('dob', 'Unknown'),
-                "medical_conditions": medical.get('conditions', []),
-                "medications": medical.get('medications', []),
-                "lab_results": medical.get('lab_results', []),
-                "vital_signs": medical.get('vital_signs', [])
-            },
-            "confidence_score": 0.92,  # Simulated confidence score
-            "processing_time": "1.8 seconds"  # Simulated processing time
-        }
-        
-        print("Document enrichment completed successfully")
-        return jsonify({"success": True, "data": enriched_data, "message": f"Document {filename} enriched successfully!"})
-    except Exception as e:
-        print(f"Error in document enrichment: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({"success": False, "error": str(e)})
-
-# Clinical Insights Route
-@app.route('/clinical_insights', methods=['POST'])
-def clinical_insights_route():
-    try:
-        # Check if there's a last uploaded file in the session
-        if 'last_uploaded_filename' not in session:
-            return jsonify({"success": False, "error": "No document has been uploaded yet. Please upload a CCDA document first."})
-        
-        filename = session['last_uploaded_filename']
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        
-        # Check if the file exists
-        if not os.path.exists(filepath):
-            return jsonify({"success": False, "error": f"File {filename} not found. Please upload the document again."})
-        
-        # Parse the CCDA file
-        ccda_data = parse_ccda_for_display(filepath)
-        
-        if not ccda_data.get('parsed_successfully', False):
-            return jsonify({"success": False, "error": "Failed to parse the document. Please try again with a valid CCDA file."})
-        
-        # Get patient and medical data
-        patient = ccda_data.get('patient', {})
-        medical = ccda_data.get('medical', {})
-        
-        # Generate personalized insights based on the patient's data
-        recommendations = []
-        alerts = []
-        risk_assessment = "Insufficient data for comprehensive risk assessment"
-        
-        # Check for conditions and generate recommendations
-        conditions = medical.get('conditions', [])
-        if conditions:
-            if any("diabetes" in cond.lower() for cond in conditions):
-                recommendations.append("Monitor blood glucose levels regularly")
-                recommendations.append("Maintain a balanced diet low in simple carbohydrates")
-                alerts.append("Diabetes detected - ensure regular HbA1c monitoring")
-            
-            if any("hypertension" in cond.lower() for cond in conditions):
-                recommendations.append("Monitor blood pressure weekly")
-                recommendations.append("Consider low-sodium diet")
-                alerts.append("Hypertension detected - maintain BP monitoring")
-            
-            if any("headache" in cond.lower() for cond in conditions):
-                recommendations.append("Track headache frequency and potential triggers")
-                recommendations.append("Ensure adequate hydration and rest")
-        
-        # Check medications
-        medications = medical.get('medications', [])
-        if medications:
-            recommendations.append("Continue current medication regimen as prescribed")
-            recommendations.append("Report any side effects to your healthcare provider")
-        
-        # Add general recommendations if we don't have specific ones
-        if len(recommendations) < 2:
-            recommendations.extend([
-                "Schedule regular check-ups with your healthcare provider",
-                "Maintain a balanced diet and regular exercise routine",
-                "Ensure adequate sleep and stress management"
-            ])
-        
-        # Generate risk assessment based on available data
-        if conditions or medications:
-            risk_factors = len(conditions) + (1 if len(medications) > 2 else 0)
-            if risk_factors > 3:
-                risk_assessment = "Elevated risk profile based on multiple conditions"
-            elif risk_factors > 1:
-                risk_assessment = "Moderate risk profile - regular monitoring advised"
-            else:
-                risk_assessment = "Low risk profile based on current data"
-        
-        # Add general alert if we don't have specific ones
-        if not alerts:
-            alerts.append("No critical alerts based on available data")
-        
-        insights = {
-            "risk_assessment": risk_assessment,
-            "recommendations": recommendations[:4],  # Limit to 4 recommendations
-            "alerts": alerts
-        }
-        
-        return jsonify({"success": True, "insights": insights, "message": f"Clinical insights for {patient.get('name', 'patient')} generated successfully!"})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
-
-# AI Disease Prediction Route
-@app.route('/predict_diseases', methods=['POST'])
-def predict_diseases_route():
-    try:
-        # Check if there's a last uploaded file in the session
-        if 'last_uploaded_filename' not in session:
-            return jsonify({"success": False, "error": "No document has been uploaded yet. Please upload a CCDA document first."})
-        
-        filename = session['last_uploaded_filename']
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        
-        # Check if the file exists
-        if not os.path.exists(filepath):
-            return jsonify({"success": False, "error": f"File {filename} not found. Please upload the document again."})
-        
-        # Parse the CCDA file
-        ccda_data = parse_ccda_for_display(filepath)
-        
-        if not ccda_data.get('parsed_successfully', False):
-            return jsonify({"success": False, "error": "Failed to parse the document. Please try again with a valid CCDA file."})
-        
-        # Get patient and medical data
-        patient = ccda_data.get('patient', {})
-        medical = ccda_data.get('medical', {})
-        
-        # Generate disease predictions using AI
-        predictions = generate_disease_predictions(patient, medical)
-        
-        return jsonify({
-            "success": True, 
-            "predictions": predictions, 
-            "message": f"Disease predictions for {patient.get('name', 'patient')} generated successfully!"
-        })
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
-
-# AI Medicine Recommendation Route
-@app.route('/recommend_medications', methods=['POST'])
-def recommend_medications_route():
-    try:
-        # Check if there's a last uploaded file in the session
-        if 'last_uploaded_filename' not in session:
-            return jsonify({"success": False, "error": "No document has been uploaded yet. Please upload a CCDA document first."})
-        
-        filename = session['last_uploaded_filename']
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        
-        # Parse the CCDA file
-        ccda_data = parse_ccda_for_display(filepath)
-        
-        if not ccda_data.get('parsed_successfully', False):
-            return jsonify({"success": False, "error": "Failed to parse the document. Please try again with a valid CCDA file."})
-        
-        # Get patient and medical data
-        patient = ccda_data.get('patient', {})
-        medical = ccda_data.get('medical', {})
-        
-        # Generate medication recommendations using medical engine
-        if medical_engine:
-            recommendations = medical_engine.generate_diabetes_recommendations(patient)
-            if medical.get('conditions') and 'Hypertension' in str(medical.get('conditions')):
-                htn_recs = medical_engine.generate_hypertension_recommendations(patient)
-                recommendations['hypertension'] = htn_recs
-        else:
-            recommendations = generate_medication_recommendations(patient, medical)
-        
-        return jsonify({
-            "success": True, 
-            "recommendations": recommendations, 
-            "message": f"Medication recommendations for {patient.get('name', 'patient')} generated successfully!"
-        })
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
-
-# AI Clinical Report Generation Route
-@app.route('/generate_clinical_report', methods=['POST'])
-def generate_clinical_report_route():
-    try:
-        # Check if there's a last uploaded file in the session
-        if 'last_uploaded_filename' not in session:
-            return jsonify({"success": False, "error": "No document has been uploaded yet. Please upload a CCDA document first."})
-        
-        filename = session['last_uploaded_filename']
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        
-        # Parse the CCDA file
-        ccda_data = parse_ccda_for_display(filepath)
-        
-        if not ccda_data.get('parsed_successfully', False):
-            return jsonify({"success": False, "error": "Failed to parse the document. Please try again with a valid CCDA file."})
-        
-        # Get patient and medical data
-        patient = ccda_data.get('patient', {})
-        medical = ccda_data.get('medical', {})
-        
-        # Generate comprehensive clinical report using AI
-        clinical_report = generate_comprehensive_clinical_report(patient, medical)
-        
-        return jsonify({
-            "success": True, 
-            "clinical_report": clinical_report, 
-            "message": f"Clinical report for {patient.get('name', 'patient')} generated successfully!"
-        })
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
-
-# AI Functions
-def generate_disease_predictions(patient_data, medical_data):
-    """Generate AI-powered disease predictions based on patient data"""
-    predictions = {}
-    
-    # Extract relevant data
-    conditions = medical_data.get('conditions', [])
-    lab_results = medical_data.get('lab_results', [])
-    vital_signs = medical_data.get('vital_signs', [])
-    medications = medical_data.get('medications', [])
-    
-    # Analyze for diabetes
-    diabetes_confidence = analyze_diabetes_risk(conditions, lab_results, vital_signs, medications)
-    if diabetes_confidence > 0.3:
-        predictions['diabetes'] = {
-            'confidence': diabetes_confidence,
-            'severity': assess_diabetes_severity(lab_results),
-            'risk_level': 'high' if diabetes_confidence > 0.7 else 'moderate',
-            'evidence': collect_diabetes_evidence(conditions, lab_results, vital_signs),
-            'recommended_actions': generate_diabetes_actions(diabetes_confidence)
-        }
-    
-    # Analyze for hypertension
-    hypertension_confidence = analyze_hypertension_risk(conditions, lab_results, vital_signs, medications)
-    if hypertension_confidence > 0.3:
-        predictions['hypertension'] = {
-            'confidence': hypertension_confidence,
-            'severity': assess_hypertension_severity(vital_signs),
-            'risk_level': 'high' if hypertension_confidence > 0.7 else 'moderate',
-            'evidence': collect_hypertension_evidence(conditions, lab_results, vital_signs),
-            'recommended_actions': generate_hypertension_actions(hypertension_confidence)
-        }
-    
-    # Analyze for heart disease
-    heart_disease_confidence = analyze_heart_disease_risk(conditions, lab_results, vital_signs, medications)
-    if heart_disease_confidence > 0.3:
-        predictions['heart_disease'] = {
-            'confidence': heart_disease_confidence,
-            'severity': assess_heart_disease_severity(conditions, lab_results),
-            'risk_level': 'high' if heart_disease_confidence > 0.7 else 'moderate',
-            'evidence': collect_heart_disease_evidence(conditions, lab_results, vital_signs),
-            'recommended_actions': generate_heart_disease_actions(heart_disease_confidence)
-        }
-    
-    return {
-        'predictions': predictions,
-        'overall_risk': calculate_overall_risk(predictions),
-        'recommendations': generate_overall_recommendations(predictions)
-    }
-
-def analyze_diabetes_risk(conditions, lab_results, vital_signs, medications):
-    """Analyze risk for diabetes"""
-    confidence = 0.0
-    
-    # Check existing conditions
-    if any('diabetes' in cond.lower() for cond in conditions):
-        confidence += 0.8
-    
-    # Check lab results
-    for lab in lab_results:
-        if 'glucose' in lab.lower():
-            if any(str(num) in lab for num in ['200', '180', '160']):
-                confidence += 0.6
-            elif any(str(num) in lab for num in ['140', '130', '120']):
-                confidence += 0.4
-        elif 'hba1c' in lab.lower():
-            if any(str(num) in lab for num in ['8.0', '7.5', '7.0']):
-                confidence += 0.7
-            elif any(str(num) in lab for num in ['6.5', '6.0', '5.7']):
-                confidence += 0.5
-    
-    # Check medications
-    if any('metformin' in med.lower() or 'insulin' in med.lower() for med in medications):
-        confidence += 0.6
-    
-    return min(confidence, 1.0)
-
-def analyze_hypertension_risk(conditions, lab_results, vital_signs, medications):
-    """Analyze risk for hypertension"""
-    confidence = 0.0
-    
-    # Check existing conditions
-    if any('hypertension' in cond.lower() or 'blood pressure' in cond.lower() for cond in conditions):
-        confidence += 0.8
-    
-    # Check vital signs
-    for vital in vital_signs:
-        if 'blood pressure' in vital.lower():
-            if any(str(num) in vital for num in ['180', '160', '150']):
-                confidence += 0.7
-            elif any(str(num) in vital for num in ['140', '130', '120']):
-                confidence += 0.5
-    
-    # Check medications
-    if any('lisinopril' in med.lower() or 'amlodipine' in med.lower() for med in medications):
-        confidence += 0.6
-    
-    return min(confidence, 1.0)
-
-def analyze_heart_disease_risk(conditions, lab_results, vital_signs, medications):
-    """Analyze risk for heart disease"""
-    confidence = 0.0
-    
-    # Check existing conditions
-    if any('heart' in cond.lower() or 'cardiac' in cond.lower() for cond in conditions):
-        confidence += 0.8
-    
-    # Check for risk factors
-    if any('diabetes' in cond.lower() for cond in conditions):
-        confidence += 0.4
-    if any('hypertension' in cond.lower() for cond in conditions):
-        confidence += 0.4
-    
-    # Check medications
-    if any('aspirin' in med.lower() or 'statin' in med.lower() for med in medications):
-        confidence += 0.5
-    
-    return min(confidence, 1.0)
-
-def assess_diabetes_severity(lab_results):
-    """Assess diabetes severity based on lab results"""
-    for lab in lab_results:
-        if 'glucose' in lab.lower():
-            if any(str(num) in lab for num in ['200', '250', '300']):
-                return 'severe'
-            elif any(str(num) in lab for num in ['160', '180']):
-                return 'moderate'
-            elif any(str(num) in lab for num in ['140', '150']):
-                return 'mild'
-    return 'unknown'
-
-def assess_hypertension_severity(vital_signs):
-    """Assess hypertension severity based on vital signs"""
-    for vital in vital_signs:
-        if 'blood pressure' in vital.lower():
-            if any(str(num) in vital for num in ['180', '200']):
-                return 'severe'
-            elif any(str(num) in vital for num in ['160', '170']):
-                return 'moderate'
-            elif any(str(num) in vital for num in ['140', '150']):
-                return 'mild'
-    return 'unknown'
-
-def assess_heart_disease_severity(conditions, lab_results):
-    """Assess heart disease severity"""
-    if any('heart failure' in cond.lower() or 'myocardial infarction' in cond.lower() for cond in conditions):
-        return 'severe'
-    elif any('heart' in cond.lower() for cond in conditions):
-        return 'moderate'
-    return 'unknown'
-
-def collect_diabetes_evidence(conditions, lab_results, vital_signs):
-    """Collect evidence supporting diabetes diagnosis"""
-    evidence = {
-        'symptoms_present': [],
-        'lab_abnormalities': [],
-        'risk_factors': []
-    }
-    
-    # Check conditions
-    if any('diabetes' in cond.lower() for cond in conditions):
-        evidence['symptoms_present'].append('Diabetes diagnosis present')
-    
-    # Check lab results
-    for lab in lab_results:
-        if 'glucose' in lab.lower():
-            evidence['lab_abnormalities'].append(lab)
-        elif 'hba1c' in lab.lower():
-            evidence['lab_abnormalities'].append(lab)
-    
-    return evidence
-
-def collect_hypertension_evidence(conditions, lab_results, vital_signs):
-    """Collect evidence supporting hypertension diagnosis"""
-    evidence = {
-        'symptoms_present': [],
-        'lab_abnormalities': [],
-        'risk_factors': []
-    }
-    
-    # Check conditions
-    if any('hypertension' in cond.lower() for cond in conditions):
-        evidence['symptoms_present'].append('Hypertension diagnosis present')
-    
-    # Check vital signs
-    for vital in vital_signs:
-        if 'blood pressure' in vital.lower():
-            evidence['lab_abnormalities'].append(vital)
-    
-    return evidence
-
-def collect_heart_disease_evidence(conditions, lab_results, vital_signs):
-    """Collect evidence supporting heart disease diagnosis"""
-    evidence = {
-        'symptoms_present': [],
-        'lab_abnormalities': [],
-        'risk_factors': []
-    }
-    
-    # Check conditions
-    if any('heart' in cond.lower() for cond in conditions):
-        evidence['symptoms_present'].append('Heart condition present')
-    
-    return evidence
-
-def generate_diabetes_actions(confidence):
-    """Generate recommended actions for diabetes"""
-    actions = []
-    
-    if confidence > 0.7:
-        actions.append('Immediate medical consultation required')
-        actions.append('Monitor blood glucose regularly')
-    elif confidence > 0.4:
-        actions.append('Schedule medical appointment within 1 week')
-        actions.append('Monitor blood glucose levels')
-    
-    actions.append('Maintain healthy diet and exercise')
-    actions.append('Schedule HbA1c testing')
-    
-    return actions
-
-def generate_hypertension_actions(confidence):
-    """Generate recommended actions for hypertension"""
-    actions = []
-    
-    if confidence > 0.7:
-        actions.append('Immediate medical consultation required')
-        actions.append('Monitor blood pressure regularly')
-    elif confidence > 0.4:
-        actions.append('Schedule medical appointment within 1 week')
-        actions.append('Monitor blood pressure weekly')
-    
-    actions.append('Reduce salt intake')
-    actions.append('Manage stress levels')
-    
-    return actions
-
-def generate_heart_disease_actions(confidence):
-    """Generate recommended actions for heart disease"""
-    actions = []
-    
-    if confidence > 0.7:
-        actions.append('Immediate cardiac evaluation required')
-        actions.append('Monitor heart rate and blood pressure')
-    elif confidence > 0.4:
-        actions.append('Schedule cardiology consultation within 1 week')
-        actions.append('Monitor for chest pain or shortness of breath')
-    
-    actions.append('Maintain heart-healthy diet')
-    actions.append('Regular exercise as tolerated')
-    
-    return actions
-
-def calculate_overall_risk(predictions):
-    """Calculate overall risk level"""
-    if not predictions:
-        return 'low'
-    
-    max_confidence = max(pred['confidence'] for pred in predictions.values())
-    
-    if max_confidence > 0.8:
-        return 'critical'
-    elif max_confidence > 0.6:
-        return 'high'
-    elif max_confidence > 0.4:
-        return 'moderate'
-    else:
-        return 'low'
-
-def generate_overall_recommendations(predictions):
-    """Generate overall recommendations"""
-    recommendations = []
-    
-    if not predictions:
-        recommendations.append('Continue routine health monitoring')
-        recommendations.append('Maintain healthy lifestyle habits')
-        return recommendations
-    
-    high_confidence = [name for name, pred in predictions.items() if pred['confidence'] > 0.6]
-    
-    if high_confidence:
-        recommendations.append(f'Immediate attention needed for: {", ".join(high_confidence)}')
-        recommendations.append('Schedule comprehensive medical evaluation')
-    
-    recommendations.append('Monitor all symptoms closely')
-    recommendations.append('Follow up with healthcare provider')
-    
-    return recommendations
-
-def generate_medication_recommendations(patient_data, medical_data):
-    """Generate AI-powered medication recommendations"""
-    recommendations = {}
-    
-    conditions = medical_data.get('conditions', [])
-    current_medications = medical_data.get('medications', [])
-    
-    # Diabetes medications
-    if any('diabetes' in cond.lower() for cond in conditions):
-        recommendations['diabetes'] = {
-            'primary_medications': [
-                {
-                    'name': 'Metformin',
-                    'reason': 'First-line treatment for Type 2 diabetes',
-                    'dosage': '500mg twice daily, titrate to 2000mg daily',
-                    'effectiveness': 0.85,
-                    'side_effects': ['nausea', 'diarrhea', 'stomach_upset']
-                }
-            ],
-            'alternative_medications': [
-                {
-                    'name': 'Sulfonylurea',
-                    'reason': 'Alternative when metformin contraindicated',
-                    'dosage': 'Variable based on glucose levels',
-                    'effectiveness': 0.75,
-                    'side_effects': ['hypoglycemia', 'weight_gain']
-                }
-            ],
-            'monitoring_required': [
-                'Blood glucose monitoring',
-                'HbA1c testing every 3-6 months',
-                'Kidney function monitoring'
-            ]
-        }
-    
-    # Hypertension medications
-    if any('hypertension' in cond.lower() for cond in conditions):
-        recommendations['hypertension'] = {
-            'primary_medications': [
-                {
-                    'name': 'Lisinopril',
-                    'reason': 'First-line ACE inhibitor for hypertension',
-                    'dosage': '10mg daily, titrate to 40mg daily',
-                    'effectiveness': 0.80,
-                    'side_effects': ['dry_cough', 'dizziness', 'fatigue']
-                }
-            ],
-            'alternative_medications': [
-                {
-                    'name': 'Amlodipine',
-                    'reason': 'Alternative calcium channel blocker',
-                    'dosage': '5-10mg daily',
-                    'effectiveness': 0.82,
-                    'side_effects': ['ankle_swelling', 'dizziness', 'flushing']
-                }
-            ],
-            'monitoring_required': [
-                'Blood pressure monitoring',
-                'Kidney function monitoring',
-                'Electrolyte monitoring'
-            ]
-        }
-    
-    # Check for drug interactions
-    interaction_warnings = check_drug_interactions(recommendations, current_medications)
-    
-    return {
-        'medication_recommendations': recommendations,
-        'interaction_warnings': interaction_warnings,
-        'safety_considerations': generate_safety_considerations(recommendations, patient_data),
-        'monitoring_requirements': generate_monitoring_requirements(recommendations)
-    }
-
-def check_drug_interactions(recommendations, current_medications):
-    """Check for potential drug interactions"""
-    interactions = []
-    
-    # Known interactions
-    known_interactions = {
-        'metformin_lisinopril': {
-            'severity': 'moderate',
-            'description': 'May increase risk of lactic acidosis',
-            'recommendation': 'Monitor closely, adjust dosages if needed'
-        },
-        'aspirin_warfarin': {
-            'severity': 'high',
-            'description': 'Increased bleeding risk',
-            'recommendation': 'Avoid combination, use alternative'
-        }
-    }
-    
-    # Check for interactions
-    for disease, recs in recommendations.items():
-        for med_type in ['primary_medications', 'alternative_medications']:
-            for med in recs.get(med_type, []):
-                med_name = med['name'].lower()
-                
-                for current_med in current_medications:
-                    current_med_lower = current_med.lower()
-                    
-                    for interaction_key, interaction_info in known_interactions.items():
-                        if (med_name in interaction_key and current_med_lower in interaction_key):
-                            interactions.append({
-                                'medication_1': med['name'],
-                                'medication_2': current_med,
-                                'severity': interaction_info['severity'],
-                                'description': interaction_info['description'],
-                                'recommendation': interaction_info['recommendation']
-                            })
-    
-    return interactions
-
-def generate_safety_considerations(recommendations, patient_data):
-    """Generate safety considerations"""
-    safety = []
-    
-    allergies = patient_data.get('allergies', [])
-    current_medications = patient_data.get('current_medications', [])
-    
-    if allergies:
-        safety.append(f'Patient has allergies to: {", ".join(allergies)}')
-        safety.append('Verify all medications are safe for patient')
-    
-    if len(current_medications) > 5:
-        safety.append('Patient on multiple medications - increased interaction risk')
-        safety.append('Consider medication review and deprescribing')
-    
-    return safety
-
-def generate_monitoring_requirements(recommendations):
-    """Generate monitoring requirements"""
-    monitoring = {
-        'laboratory_tests': [],
-        'vital_signs': [],
-        'frequency': {}
-    }
-    
-    for disease, recs in recommendations.items():
-        if 'monitoring_required' in recs:
-            monitoring['laboratory_tests'].extend(recs['monitoring_required'])
-    
-    monitoring['frequency'] = {
-        'daily': ['Blood glucose', 'Blood pressure'],
-        'weekly': ['Weight', 'Symptom assessment'],
-        'monthly': ['Laboratory tests'],
-        'quarterly': ['Comprehensive evaluation']
-    }
-    
-    return monitoring
-
-def generate_comprehensive_clinical_report(patient_data, medical_data):
-    """Generate comprehensive clinical report"""
-    # Generate disease predictions
-    disease_predictions = generate_disease_predictions(patient_data, medical_data)
-    
-    # Generate medication recommendations
-    medication_recommendations = generate_medication_recommendations(patient_data, medical_data)
-    
-    # Create comprehensive report
-    report = {
-        'executive_summary': generate_executive_summary(disease_predictions),
-        'patient_overview': {
-            'demographics': {
-                'name': patient_data.get('name', 'Unknown'),
-                'dob': patient_data.get('dob', 'Unknown'),
-                'gender': patient_data.get('gender', 'Unknown')
-            },
-            'current_medications': medical_data.get('medications', []),
-            'medical_conditions': medical_data.get('conditions', [])
-        },
-        'clinical_assessment': {
-            'primary_concerns': list(disease_predictions.get('predictions', {}).keys()),
-            'overall_risk': disease_predictions.get('overall_risk', 'unknown'),
-            'recommendations': disease_predictions.get('recommendations', [])
-        },
-        'treatment_recommendations': {
-            'medications': medication_recommendations.get('medication_recommendations', {}),
-            'interaction_warnings': medication_recommendations.get('interaction_warnings', []),
-            'safety_considerations': medication_recommendations.get('safety_considerations', [])
-        },
-        'monitoring_plan': {
-            'requirements': medication_recommendations.get('monitoring_requirements', {}),
-            'frequency': 'As recommended by healthcare provider',
-            'alerts': [
-                'Contact healthcare provider if symptoms worsen',
-                'Seek emergency care for severe symptoms',
-                'Report any medication side effects immediately'
-            ]
-        },
-        'follow_up_plan': {
-            'immediate': 'Within 24-48 hours for high-risk conditions',
-            'short_term': 'Within 1 week for moderate-risk conditions',
-            'long_term': 'Within 2-4 weeks for low-risk conditions'
-        },
-        'report_metadata': {
-            'generated_at': datetime.now().isoformat(),
-            'ai_engine_version': '2.0.0',
-            'confidence_threshold': 0.4,
-            'report_type': 'comprehensive_clinical_assessment'
-        }
-    }
-    
-    return report
-
-def generate_executive_summary(disease_predictions):
-    """Generate executive summary"""
-    if not disease_predictions.get('predictions'):
-        return "No significant disease risk detected. Continue routine health monitoring."
-    
-    high_risk_diseases = [name for name, pred in disease_predictions['predictions'].items() 
-                         if pred['confidence'] > 0.6]
-    
-    if high_risk_diseases:
-        return f"High risk detected for: {', '.join(high_risk_diseases)}. " \
-               f"Immediate medical evaluation recommended."
-    else:
-        return f"Moderate risk detected for: {', '.join(disease_predictions['predictions'].keys())}. " \
-               f"Schedule medical consultation within 2 weeks."
-
-# Retrieve Patient Data by Hash Route
-@app.route('/retrieve_by_hash', methods=['POST'])
-def retrieve_by_hash():
-    try:
-        data = request.get_json()
-        hash_code = data.get('hash', '').strip()
-        
-        if not hash_code:
-            return jsonify({"success": False, "error": "Hash code is required"})
-        
-        # Load file history
-        file_history = load_file_history()
-        
-        # Find the file with matching hash
-        matching_file = None
-        for file_info in file_history:
-            if file_info.get('file_hash') == hash_code or file_info.get('block_hash') == hash_code:
-                matching_file = file_info
+        reminders = _load_json(REMINDERS_FILE, [])
+        for reminder in reminders:
+            if reminder.get('id') == reminder_id:
+                reminder['last_taken'] = datetime.now().isoformat()
+                reminder['taken_count'] = reminder.get('taken_count', 0) + 1
                 break
         
-        if not matching_file:
-            return jsonify({"success": False, "error": "Hash code not found in file history"})
+        _save_json(REMINDERS_FILE, reminders)
         
-        # Get the file path
-        filename = matching_file['filename']
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        
-        # Check if file still exists
-        if not os.path.exists(filepath):
-            return jsonify({"success": False, "error": "File no longer exists on server"})
-        
-        # Parse the CCDA file to get patient data
-        ccda_data = parse_ccda_for_display(filepath)
-        
-        if not ccda_data.get('parsed_successfully', False):
-            return jsonify({"success": False, "error": "Failed to parse the document"})
-        
-        # Prepare patient data
-        patient_data = {
-            'name': ccda_data.get('patient', {}).get('name', 'Unknown'),
-            'dob': ccda_data.get('patient', {}).get('dob', 'Not available'),
-            'gender': ccda_data.get('patient', {}).get('gender', 'Not available'),
-            'medications': ccda_data.get('medical', {}).get('medications', []),
-            'conditions': ccda_data.get('medical', {}).get('conditions', []),
-            'labs': ccda_data.get('medical', {}).get('labs', []),
-            'vitals': ccda_data.get('medical', {}).get('vitals', [])
-        }
-        
-        # Prepare file info
-        file_info = {
-            'filename': matching_file['filename'],
-            'upload_time': matching_file['upload_time'],
-            'file_size': matching_file['file_size'],
-            'block_index': matching_file['block_index'],
-            'file_hash': matching_file['file_hash'],
-            'block_hash': matching_file['block_hash'],
-            'status': matching_file['status']
-        }
-        
-        return jsonify({
-            "success": True, 
-            "patient_data": patient_data,
-            "file_info": file_info,
-            "message": f"Patient data retrieved successfully for {patient_data['name']}"
-        })
-        
+        return jsonify({'success': True, 'message': 'Medicine marked as taken'})
     except Exception as e:
-        print(f"Error in retrieve_by_hash: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({"success": False, "error": str(e)})
+        return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/static/<path:filename>')
-def static_files(filename):
-    return app.send_static_file(filename)
+@app.route('/api/caregiver/add-note', methods=['POST'])
+@login_required
+@role_required('caregiver')
+def api_add_caregiver_note():
+    """Add caregiver note"""
+    try:
+        user = session.get('user', {})
+        data = request.get_json()
+        
+        note = {
+            'id': str(uuid.uuid4()),
+            'patient_id': user.get('assigned_patient'),
+            'caregiver_name': user.get('name'),
+            'note': data.get('note'),
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        _append_json_array('caregiver_notes.json', note)
+        
+        return jsonify({'success': True, 'note': note})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Helper Functions
+def extract_prescription_data(image_path):
+    """Extract prescription data from image using AI/OCR"""
+    try:
+        try:
+            import pytesseract
+            from PIL import Image
+            
+            img = Image.open(image_path)
+            text = pytesseract.image_to_string(img)
+            
+            medications = parse_prescription_text(text)
+            if medications:
+                return medications
+        except ImportError:
+            print("Tesseract not installed, using demo data")
+        except Exception as e:
+            print(f"OCR error: {e}, using demo data")
+        
+        return get_demo_prescription_data()
+    except Exception as e:
+        print(f"Error in extract_prescription_data: {e}")
+        return get_demo_prescription_data()
+
+def parse_prescription_text(text):
+    """Parse OCR text to extract medication details"""
+    import re
+    
+    medications = []
+    lines = text.split('\n')
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        
+        match = re.search(r'([A-Za-z]+)\s+(\d+\s*mg)\s+(once|twice|thrice|daily|times)', line, re.IGNORECASE)
+        if match:
+            med = {
+                'name': match.group(1),
+                'dosage': match.group(2),
+                'frequency': match.group(3) + ' daily',
+                'times': get_times_for_frequency(match.group(3)),
+                'duration': '30 days'
+            }
+            medications.append(med)
+    
+    return medications if medications else None
+
+def get_times_for_frequency(frequency):
+    """Get medication times based on frequency"""
+    frequency = frequency.lower()
+    times_map = {
+        'once': ['08:00'],
+        'twice': ['08:00', '20:00'],
+        'thrice': ['08:00', '14:00', '20:00'],
+        'daily': ['08:00']
+    }
+    return times_map.get(frequency, ['08:00'])
+
+def get_demo_prescription_data():
+    """Return demo prescription data for testing"""
+    return [
+        {
+            'name': 'Amlong',
+            'dosage': '5mg',
+            'frequency': 'Once daily',
+            'times': ['08:00'],
+            'duration': '30 days'
+        },
+        {
+            'name': 'Metformin',
+            'dosage': '500mg',
+            'frequency': 'Twice daily',
+            'times': ['08:00', '20:00'],
+            'duration': '30 days'
+        }
+    ]
+
+@app.route('/patient/emergency-doctors')
+@login_required
+@role_required('patient')
+def patient_emergency_doctors():
+    """Emergency doctors directory for Mumbai areas"""
+    user = session.get('user', {})
+    doctors = _load_json('mumbai_doctors.json', [])
+    
+    # Get unique areas for filtering
+    areas = sorted(list(set([d.get('area') for d in doctors])))
+    
+    return render_template('patient/emergency_doctors.html', 
+                         user=user, 
+                         doctors=doctors,
+                         areas=areas)
+
+@app.route('/api/emergency-doctors/search')
+@login_required
+def api_search_emergency_doctors():
+    """Search emergency doctors by area or specialization"""
+    try:
+        area = request.args.get('area', '').strip()
+        specialization = request.args.get('specialization', '').strip()
+        
+        doctors = _load_json('mumbai_doctors.json', [])
+        
+        if area:
+            doctors = [d for d in doctors if d.get('area', '').lower() == area.lower()]
+        
+        if specialization:
+            doctors = [d for d in doctors if specialization.lower() in d.get('specialization', '').lower()]
+        
+        return jsonify({'success': True, 'doctors': doctors})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5000)
+
+
+# Blockchain API Endpoints
+@app.route('/api/blockchain/stats')
+@login_required
+def api_blockchain_stats():
+    """Get blockchain statistics"""
+    try:
+        stats = blockchain.get_blockchain_stats()
+        return jsonify({
+            'success': True,
+            'stats': stats
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/blockchain/verify/<block_hash>')
+@login_required
+def api_verify_blockchain_record(block_hash):
+    """Verify a blockchain record"""
+    try:
+        is_valid = blockchain.verify_record(block_hash)
+        return jsonify({
+            'success': True,
+            'verified': is_valid,
+            'block_hash': block_hash
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/blockchain/patient-records/<patient_id>')
+@login_required
+@role_required('patient', 'doctor', 'admin')
+def api_patient_blockchain_records(patient_id):
+    """Get all blockchain records for a patient"""
+    try:
+        records = blockchain.get_patient_records(patient_id)
+        return jsonify({
+            'success': True,
+            'records': records,
+            'total': len(records)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500

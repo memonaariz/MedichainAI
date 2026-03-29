@@ -1,0 +1,40 @@
+# Virtual environments (recreate: python -m venv .venv)
+venv/
+.venv/
+env/
+ENV/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Local / secrets
+.env
+.env.*
+!.env.example
+
+# User uploads & generated files (app creates uploads/ at runtime)
+uploads/*
+!uploads/.gitkeep
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs / DB scratch
+*.log
+*.sqlite3
+
+# Optional local folders
+file jo upload krna hoga/

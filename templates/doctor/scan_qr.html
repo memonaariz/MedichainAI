@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}Scan Patient QR - Doctor{% endblock %}
+
+{% block extra_css %}
+<style>
+    #qr-scanner {
+        width: 100%;
+        max-width: 500px;
+        margin: 1rem auto;
+    }
+    
+    .patient-info {
+        background: #f0f8ff;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-top: 1rem;
+    }
+    
+    .allergy-warning {
+        background: #fff3cd;
+        border-left: 4px solid #ff6b6b;
+        padding: 1rem;
+        margin: 1rem 0;
+        border-radius: 4px;
+    }
+    
+    .medical-history {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 4px;
+        margin: 1rem 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>📱 Scan Patient QR Code</h2>
+    
+    <!-- Tab Navigation -->
+    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 2px solid #ddd;">
+        <button onclick="switchTab('camera')" id="camera-tab" class="tab-btn" style="padding: 0.75rem 1.5rem; background: none; border: none; cursor: pointer; font-size: 1rem; font-weight: bold; color: #3498db; border-bottom: 3px solid #3498db;">
+            📷 Camera
+        </button>
+        <button onclick="switchTab('upload')" id="upload-tab" class="tab-btn" style="padding: 0.75rem 1.5rem; background: none; border: none; cursor: pointer; font-size: 1rem; font-weight: bold; color: #999;">
+            📁 Upload QR Code
+        </button>
+    </div>
+    
+    <!-- Camera Tab -->
+    <div id="camera-tab-content">
+        <div id="qr-scanner"></div>
+        
+        <div style="text-align: center; margin-top: 1rem;">
+            <p style="color: #666;">Point camera at patient's QR code</p>
+        </div>
+    </div>
+    
+    <!-- Upload Tab -->
+    <div id="upload-tab-content" style="display: none;">
+        <div style="text-align: center; padding: 2rem;">
+            <p style="font-size: 1.1rem; margin-bottom: 1rem;">Upload QR Code Image from PC</p>
+            <input type="file" id="qr-file-input" accept="image/*" style="padding: 0.75rem; border: 2px dashed #3498db; border-radius: 4px; width: 100%; cursor: pointer;">
+            <p style="color: #666; margin-top: 0.5rem; font-size: 0.9rem;">Supported formats: JPG, PNG, GIF</p>
+        </div>
+    </div>
+    
+    <div id="patient-details" style="display: none;">
+        <div class="patient-info">
+            <h3 id="patient-name"></h3>
+            <p><strong>Age:</strong> <span id="patient-age"></span></p>
+            <p><strong>Phone:</strong> <span id="patient-phone"></span></p>
+            
+            <div class="allergy-warning">
+                <strong>⚠️ ALLERGIES:</strong>
+                <p id="patient-allergies"></p>
+            </div>
+            
+            <div class="medical-history">
+                <strong>Medical History:</strong>
+                <p id="patient-history"></p>
+            </div>
+            
+            <a href="#" id="write-rx-btn" class="btn" style="margin-top: 1rem; background: #28a745;">
+                ✍️ Write Prescription
+            </a>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script>
+    let currentPatientId = null;
+    
+    // Tab switching
+    function switchTab(tab) {
+        const cameraCont = document.getElementById('camera-tab-content');
+        const uploadCont = document.getElementById('upload-tab-content');
+        const cameraTab = document.getElementById('camera-tab');
+        const uploadTab = document.getElementById('upload-tab');
+        
+        if (tab === 'camera') {
+            cameraCont.style.display = 'block';
+            uploadCont.style.display = 'none';
+            cameraTab.style.color = '#3498db';
+            cameraTab.style.borderBottom = '3px solid #3498db';
+            uploadTab.style.color = '#999';
+            uploadTab.style.borderBottom = 'none';
+            startScanner();
+        } else {
+            cameraCont.style.display = 'none';
+            uploadCont.style.display = 'block';
+            cameraTab.style.color = '#999';
+            cameraTab.style.borderBottom = 'none';
+            uploadTab.style.color = '#3498db';
+            uploadTab.style.borderBottom = '3px solid #3498db';
+            stopScanner();
+        }
+    }
+    
+    // File upload handler
+    document.getElementById('qr-file-input').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+                
+                if (code) {
+                    const patientId = code.data.replace('PATIENT_', '').replace('_QR', '');
+                    fetchPatientDetails(patientId);
+                    alert('✅ QR Code scanned successfully!');
+                } else {
+                    alert('❌ Could not read QR code from image. Please try another image.');
+                }
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+    
+    // Simple QR code scanner
+    const video = document.createElement('video');
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    let scannerActive = false;
+    
+    async function startScanner() {
+        if (scannerActive) return;
+        
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            video.srcObject = stream;
+            video.play();
+            scannerActive = true;
+            
+            const container = document.getElementById('qr-scanner');
+            if (!container.contains(video)) {
+                container.appendChild(video);
+            }
+            
+            video.style.width = '100%';
+            video.style.maxWidth = '500px';
+            video.style.borderRadius = '8px';
+            
+            scanFrame();
+        } catch (err) {
+            alert('Camera access denied. Please allow camera access or use Upload option.');
+        }
+    }
+    
+    function stopScanner() {
+        if (video.srcObject) {
+            video.srcObject.getTracks().forEach(track => track.stop());
+            scannerActive = false;
+        }
+    }
+    
+    function scanFrame() {
+        if (!scannerActive) return;
+        
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0);
+            
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height);
+            
+            if (code) {
+                const patientId = code.data.replace('PATIENT_', '').replace('_QR', '');
+                if (patientId !== currentPatientId) {
+                    currentPatientId = patientId;
+                    fetchPatientDetails(patientId);
+                }
+            }
+        }
+        requestAnimationFrame(scanFrame);
+    }
+    
+    function fetchPatientDetails(patientId) {
+        fetch(`/api/doctor/patient/${patientId}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const patient = data.patient;
+                    document.getElementById('patient-name').textContent = patient.name;
+                    document.getElementById('patient-age').textContent = patient.age;
+                    document.getElementById('patient-phone').textContent = patient.phone;
+                    document.getElementById('patient-allergies').textContent = patient.allergies.join(', ');
+                    document.getElementById('patient-history').textContent = patient.medical_history.join(', ');
+                    
+                    document.getElementById('write-rx-btn').href = `/doctor/write-prescription/${patientId}`;
+                    document.getElementById('patient-details').style.display = 'block';
+                }
+            })
+            .catch(err => console.error('Error:', err));
+    }
+    
+    // Start scanner on page load
+    startScanner();
+</script>
+{% endblock %}

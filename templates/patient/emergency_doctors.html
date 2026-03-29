@@ -1,0 +1,503 @@
+{% extends "base.html" %}
+
+{% block title %}Emergency Doctors - MediChain{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --gradient-2: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        --gradient-3: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    
+    .emergency-header {
+        background: var(--gradient-1);
+        color: white;
+        padding: 3rem 2rem;
+        border-radius: 20px;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow-lg);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .emergency-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 300px;
+        height: 300px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+    }
+    
+    .emergency-header h2 {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .emergency-header p {
+        font-size: 1.1rem;
+        opacity: 0.95;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .emergency-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 0.5rem 1.5rem;
+        border-radius: 30px;
+        margin-top: 1rem;
+        font-weight: 600;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+    
+    .filter-section {
+        background: white;
+        padding: 2rem;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1rem;
+    }
+    
+    .filter-group {
+        position: relative;
+    }
+    
+    .filter-group label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #374151;
+        font-size: 0.95rem;
+    }
+    
+    .filter-group select,
+    .filter-group input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        background: white;
+    }
+    
+    .filter-group select:focus,
+    .filter-group input:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .doctors-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 2rem;
+    }
+    
+    .doctor-card {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .doctor-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 6px;
+        background: var(--gradient-2);
+    }
+    
+    .doctor-card:hover {
+        transform: translateY(-8px);
+        box-shadow: var(--shadow-lg);
+        border-color: #667eea;
+    }
+    
+    .doctor-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .doctor-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: var(--gradient-3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        color: white;
+        font-weight: 700;
+        flex-shrink: 0;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    .doctor-info h3 {
+        font-size: 1.4rem;
+        margin-bottom: 0.25rem;
+        color: #111827;
+    }
+    
+    .doctor-specialization {
+        color: #667eea;
+        font-weight: 600;
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .doctor-rating {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        background: #fef3c7;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #92400e;
+    }
+    
+    .doctor-details {
+        margin: 1.5rem 0;
+    }
+    
+    .detail-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+        background: #f9fafb;
+        border-radius: 10px;
+        transition: all 0.2s ease;
+    }
+    
+    .detail-row:hover {
+        background: #f3f4f6;
+    }
+    
+    .detail-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        background: var(--gradient-1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        flex-shrink: 0;
+    }
+    
+    .detail-content {
+        flex: 1;
+    }
+    
+    .detail-label {
+        font-size: 0.8rem;
+        color: #6b7280;
+        margin-bottom: 0.25rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+    }
+    
+    .detail-value {
+        font-size: 0.95rem;
+        color: #111827;
+        font-weight: 500;
+    }
+    
+    .doctor-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+    
+    .action-btn {
+        padding: 0.875rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        text-decoration: none;
+    }
+    
+    .btn-call {
+        background: var(--gradient-2);
+        color: white;
+        box-shadow: 0 4px 6px -1px rgba(245, 87, 108, 0.3);
+    }
+    
+    .btn-call:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(245, 87, 108, 0.4);
+    }
+    
+    .btn-emergency {
+        background: linear-gradient(135deg, #ff0844 0%, #ffb199 100%);
+        color: white;
+        box-shadow: 0 4px 6px -1px rgba(255, 8, 68, 0.3);
+        animation: emergency-pulse 2s infinite;
+    }
+    
+    @keyframes emergency-pulse {
+        0%, 100% { box-shadow: 0 4px 6px -1px rgba(255, 8, 68, 0.3); }
+        50% { box-shadow: 0 4px 20px 0 rgba(255, 8, 68, 0.6); }
+    }
+    
+    .btn-emergency:hover {
+        transform: translateY(-2px);
+        animation: none;
+        box-shadow: 0 10px 15px -3px rgba(255, 8, 68, 0.5);
+    }
+    
+    .experience-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #dbeafe;
+        color: #1e40af;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-top: 0.5rem;
+    }
+    
+    .area-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #dcfce7;
+        color: #166534;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-left: 0.5rem;
+    }
+    
+    .no-results {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #6b7280;
+    }
+    
+    .no-results i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+    
+    @media (max-width: 768px) {
+        .doctors-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .emergency-header h2 {
+            font-size: 1.75rem;
+        }
+        
+        .doctor-actions {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="emergency-header">
+    <h2>
+        <i class="fas fa-user-md"></i>
+        Emergency Doctors Directory
+    </h2>
+    <p>Highly-rated doctors across Mumbai - Thane, Mulund, Mumbra, Kalwa, Dombivli & more</p>
+    <div class="emergency-badge">
+        <i class="fas fa-phone-volume"></i>
+        24/7 Emergency Contact Available
+    </div>
+</div>
+
+<div class="filter-section">
+    <h3 style="margin-bottom: 1rem; color: #111827;">
+        <i class="fas fa-filter"></i> Filter Doctors
+    </h3>
+    <div class="filter-grid">
+        <div class="filter-group">
+            <label for="areaFilter">
+                <i class="fas fa-map-marker-alt"></i> Select Area
+            </label>
+            <select id="areaFilter" onchange="filterDoctors()">
+                <option value="">All Areas</option>
+                {% for area in areas %}
+                <option value="{{ area }}">{{ area }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label for="specializationFilter">
+                <i class="fas fa-stethoscope"></i> Specialization
+            </label>
+            <input type="text" id="specializationFilter" placeholder="e.g., Cardiologist, Pediatrician" onkeyup="filterDoctors()">
+        </div>
+    </div>
+</div>
+
+<div id="doctorsContainer">
+    <div class="doctors-grid">
+        {% for doctor in doctors %}
+        <div class="doctor-card" data-area="{{ doctor.area }}" data-specialization="{{ doctor.specialization }}">
+            <div class="doctor-header">
+                <div class="doctor-avatar">
+                    {{ doctor.name.split()[1][0] if doctor.name.split()|length > 1 else doctor.name[0] }}
+                </div>
+                <div class="doctor-info">
+                    <h3>{{ doctor.name }}</h3>
+                    <div class="doctor-specialization">{{ doctor.specialization }}</div>
+                    <div class="doctor-rating">
+                        <i class="fas fa-star"></i> {{ doctor.rating }}
+                    </div>
+                    <div class="experience-badge">
+                        <i class="fas fa-award"></i> {{ doctor.experience }}
+                    </div>
+                    <div class="area-badge">
+                        <i class="fas fa-map-marker-alt"></i> {{ doctor.area }}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="doctor-details">
+                <div class="detail-row">
+                    <div class="detail-icon">
+                        <i class="fas fa-hospital"></i>
+                    </div>
+                    <div class="detail-content">
+                        <div class="detail-label">Hospital</div>
+                        <div class="detail-value">{{ doctor.hospital }}</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-icon">
+                        <i class="fas fa-map-marked-alt"></i>
+                    </div>
+                    <div class="detail-content">
+                        <div class="detail-label">Address</div>
+                        <div class="detail-value">{{ doctor.address }}</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="detail-content">
+                        <div class="detail-label">Timings</div>
+                        <div class="detail-value">{{ doctor.timings }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="doctor-actions">
+                <a href="tel:{{ doctor.phone }}" class="action-btn btn-call">
+                    <i class="fas fa-phone"></i>
+                    Call Hospital
+                </a>
+                <a href="tel:{{ doctor.emergency }}" class="action-btn btn-emergency">
+                    <i class="fas fa-ambulance"></i>
+                    Emergency
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+function filterDoctors() {
+    const areaFilter = document.getElementById('areaFilter').value.toLowerCase();
+    const specializationFilter = document.getElementById('specializationFilter').value.toLowerCase();
+    const cards = document.querySelectorAll('.doctor-card');
+    let visibleCount = 0;
+    
+    cards.forEach(card => {
+        const area = card.getAttribute('data-area').toLowerCase();
+        const specialization = card.getAttribute('data-specialization').toLowerCase();
+        
+        const areaMatch = !areaFilter || area === areaFilter;
+        const specMatch = !specializationFilter || specialization.includes(specializationFilter);
+        
+        if (areaMatch && specMatch) {
+            card.style.display = 'block';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    // Show no results message if needed
+    const container = document.getElementById('doctorsContainer');
+    let noResults = container.querySelector('.no-results');
+    
+    if (visibleCount === 0) {
+        if (!noResults) {
+            noResults = document.createElement('div');
+            noResults.className = 'no-results';
+            noResults.innerHTML = `
+                <i class="fas fa-search"></i>
+                <h3>No doctors found</h3>
+                <p>Try adjusting your filters</p>
+            `;
+            container.appendChild(noResults);
+        }
+    } else {
+        if (noResults) {
+            noResults.remove();
+        }
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Medication Reminders</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#0b1020; color:#e7f0ff; margin:0; }
+    header { background:#111a33; padding:12px 16px; border-bottom:1px solid #1e2a4d; }
+    main { padding:16px; display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+    input, select, button { padding:8px; border-radius:6px; border:1px solid #2f4275; background:#0b1020; color:#e7f0ff; }
+    button { background:#1e2a4d; cursor:pointer; }
+    .card { background:#111a33; border:1px solid #1e2a4d; border-radius:8px; padding:12px; }
+    #list { max-height:70vh; overflow:auto; }
+    #messages { height:150px; overflow:auto; background:#0c1430; padding:8px; border:1px solid #1e2a4d; border-radius:6px; }
+  </style>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+  <header>
+    <h3>Medication Reminders</h3>
+  </header>
+  <main>
+    <section class="card">
+      <h4>Create Reminder</h4>
+      <div>
+        <input id="patientId" placeholder="Patient ID (optional)" />
+      </div>
+      <div>
+        <input id="message" placeholder="Message (e.g., Take Metformin 500mg)" />
+      </div>
+      <div>
+        <input id="when" type="datetime-local" />
+      </div>
+      <div>
+        <label><input type="checkbox" id="ch_inapp" checked /> In-App</label>
+      </div>
+      <button id="create">Schedule</button>
+    </section>
+    <section class="card">
+      <h4>Scheduled Reminders</h4>
+      <div id="list"></div>
+      <h4>Live Notifications</h4>
+      <div id="messages"></div>
+    </section>
+  </main>
+<script>
+  const socket = io();
+  const messages = document.getElementById('messages');
+  socket.on('connect', () => { /* could join patient-specific rooms if needed */ });
+  socket.on('reminder', (data) => {
+    const div = document.createElement('div');
+    div.textContent = `[${data.sentAt}] ${data.message} (to ${data.patientId||'all'})`;
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+  });
+
+  async function loadList() {
+    const res = await fetch('/reminders/list');
+    const data = await res.json();
+    const box = document.getElementById('list');
+    box.innerHTML = '';
+    (data.reminders || []).forEach(r => {
+      const el = document.createElement('div');
+      el.textContent = `${r.when} - ${r.message} (${r.status})`;
+      box.appendChild(el);
+    });
+  }
+
+  document.getElementById('create').onclick = async () => {
+    const patientId = document.getElementById('patientId').value.trim();
+    const message = document.getElementById('message').value.trim();
+    const whenLocal = document.getElementById('when').value;
+    if (!message || !whenLocal) { alert('Enter message and time'); return; }
+    const whenISO = new Date(whenLocal).toISOString();
+    const channels = [];
+    if (document.getElementById('ch_inapp').checked) channels.push('in_app');
+    const res = await fetch('/reminders/create', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ patientId, message, when: whenISO, channels })
+    });
+    if (!res.ok) { const e = await res.json(); alert('Error: '+(e.error||res.status)); return; }
+    await loadList();
+  };
+  loadList();
+</script>
+</body>
+</html>

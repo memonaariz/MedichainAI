@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+
+{% block title %}Caregiver Dashboard - Senior Care App{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <h2>👩‍⚕️ Caregiver Dashboard</h2>
+        <p class="text-muted">Manage care for {{ patient.name }}</p>
+    </div>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{{ reminders|length }}</div>
+            <div class="stat-label">Active Medicines</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ metrics|length }}</div>
+            <div class="stat-label">Health Readings</div>
+        </div>
+    </div>
+    
+    <div class="card" style="margin-top: 20px;">
+        <h3>📋 Today's Medicines</h3>
+        {% if reminders %}
+            <div class="medicines-list">
+                {% for reminder in reminders %}
+                <div class="medicine-item">
+                    <div class="medicine-info">
+                        <h4>{{ reminder.medication }}</h4>
+                        <p><strong>Dosage:</strong> {{ reminder.dosage }}</p>
+                        <p><strong>Frequency:</strong> {{ reminder.frequency }}</p>
+                        <p><strong>Times:</strong> {{ reminder.times|join(', ') }}</p>
+                        {% if reminder.last_taken %}
+                        <p class="last-taken">✓ Last taken: {{ reminder.last_taken[:10] }} {{ reminder.last_taken[11:16] }}</p>
+                        {% endif %}
+                    </div>
+                    <button class="btn btn-success" onclick="markMedicineTaken('{{ reminder.id }}')">
+                        ✓ Mark Taken
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted">No medicines scheduled for today.</p>
+        {% endif %}
+    </div>
+    
+    <div class="card" style="margin-top: 20px;">
+        <h3>📊 Recent Health Readings</h3>
+        {% if metrics %}
+            <div class="metrics-list">
+                {% for metric in metrics|reverse|slice(0, 5) %}
+                <div class="metric-item">
+                    <strong>{{ metric.metric_type|replace('_', ' ')|title }}</strong>
+                    <p>{{ metric.value }} {{ metric.unit }}</p>
+                    <p class="metric-date">{{ metric.recorded_at[:10] }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted">No health readings recorded yet.</p>
+        {% endif %}
+    </div>
+    
+    <div class="card" style="margin-top: 20px;">
+        <h3>📝 Add Health Note</h3>
+        <div class="note-form">
+            <textarea id="noteText" class="form-control" rows="4" placeholder="Add a note about the patient's health..."></textarea>
+            <button class="btn btn-primary" onclick="addNote()" style="margin-top: 10px;">Add Note</button>
+        </div>
+    </div>
+    
+    <div class="card" style="margin-top: 20px;">
+        <h3>👤 Patient Information</h3>
+        <div class="patient-info">
+            <p><strong>Name:</strong> {{ patient.name }}</p>
+            <p><strong>Age:</strong> {{ patient.age }} years</p>
+            <p><strong>Phone:</strong> {{ patient.phone }}</p>
+            <p><strong>Blood Group:</strong> {{ patient.blood_group }}</p>
+            {% if patient.allergies %}
+            <p><strong>Allergies:</strong> 
+                {% for allergy in patient.allergies %}
+                <span class="allergy-badge">{{ allergy }}</span>
+                {% endfor %}
+            </p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.stat-card {
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 32px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.stat-label {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.medicines-list {
+    display: grid;
+    gap: 15px;
+}
+
+.medicine-item {
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.medicine-info h4 {
+    margin: 0 0 10px 0;
+}
+
+.medicine-info p {
+    margin: 5px 0;
+    font-size: 14px;
+}
+
+.last-taken {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.metrics-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.metric-item {
+    padding: 15px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.metric-item strong {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.metric-item p {
+    margin: 5px 0;
+}
+
+.metric-date {
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+.note-form {
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+    font-family: inherit;
+}
+
+.patient-info {
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.patient-info p {
+    margin: 10px 0;
+}
+
+.allergy-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    background: #ffe6e6;
+    color: #c92a2a;
+    border-radius: 4px;
+    font-size: 12px;
+    margin-right: 5px;
+}
+
+@media (max-width: 768px) {
+    .medicine-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .medicine-item button {
+        width: 100%;
+        margin-top: 10px;
+    }
+}
+</style>
+
+<script>
+function markMedicineTaken(reminderId) {
+    fetch('/api/caregiver/mark-medicine-taken', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            reminder_id: reminderId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Medicine marked as taken!');
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function addNote() {
+    const noteText = document.getElementById('noteText').value;
+    
+    if (!noteText.trim()) {
+        alert('Please enter a note');
+        return;
+    }
+    
+    fetch('/api/caregiver/add-note', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            note: noteText
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Note added successfully!');
+            document.getElementById('noteText').value = '';
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+</script>
+{% endblock %}

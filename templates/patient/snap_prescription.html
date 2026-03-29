@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+
+{% block title %}Snap Prescription{% endblock %}
+
+{% block extra_css %}
+<style>
+    .camera-container {
+        max-width: 500px;
+        margin: 1rem auto;
+        text-align: center;
+    }
+    
+    #camera {
+        width: 100%;
+        border-radius: 8px;
+        background: #000;
+    }
+    
+    .controls {
+        margin-top: 1rem;
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+    }
+    
+    .btn-camera {
+        background: #dc3545;
+        padding: 1rem 2rem;
+        font-size: 1.1rem;
+    }
+    
+    .btn-camera:hover {
+        background: #c82333;
+    }
+    
+    .processing {
+        background: #f0f8ff;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-top: 1rem;
+        display: none;
+    }
+    
+    .med-result {
+        background: #e8f5e9;
+        padding: 1rem;
+        border-radius: 8px;
+        margin: 0.5rem 0;
+        border-left: 4px solid #4caf50;
+    }
+    
+    .buy-btn {
+        background: #ff9800;
+        color: white;
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        margin-left: 0.5rem;
+    }
+    
+    .buy-btn:hover {
+        background: #e68900;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>📸 Snap Your Prescription</h2>
+    <p style="margin-top: 0.5rem; color: #666;">Take a clear photo of your prescription or upload from PC. AI will read it automatically.</p>
+    
+    <!-- Tab Navigation -->
+    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 2px solid #ddd;">
+        <button onclick="switchTab('camera')" id="camera-tab" class="tab-btn" style="padding: 0.75rem 1.5rem; background: none; border: none; cursor: pointer; font-size: 1rem; font-weight: bold; color: #3498db; border-bottom: 3px solid #3498db;">
+            📷 Camera
+        </button>
+        <button onclick="switchTab('upload')" id="upload-tab" class="tab-btn" style="padding: 0.75rem 1.5rem; background: none; border: none; cursor: pointer; font-size: 1rem; font-weight: bold; color: #999;">
+            📁 Upload from PC
+        </button>
+    </div>
+    
+    <!-- Camera Tab -->
+    <div id="camera-tab-content">
+        <div class="camera-container">
+            <video id="camera" autoplay playsinline></video>
+            
+            <div class="controls">
+                <button class="btn btn-camera" onclick="capturePhoto()">📷 Capture</button>
+                <button class="btn btn-secondary" onclick="toggleCamera()">🔄 Switch</button>
+            </div>
+            
+            <canvas id="canvas" style="display: none;"></canvas>
+        </div>
+    </div>
+    
+    <!-- Upload Tab -->
+    <div id="upload-tab-content" style="display: none;">
+        <div style="text-align: center; padding: 2rem;">
+            <p style="font-size: 1.1rem; margin-bottom: 1rem;">Upload Prescription Image from PC</p>
+            <input type="file" id="prescription-file-input" accept="image/*" style="padding: 0.75rem; border: 2px dashed #3498db; border-radius: 4px; width: 100%; cursor: pointer;">
+            <p style="color: #666; margin-top: 0.5rem; font-size: 0.9rem;">Supported formats: JPG, PNG, GIF</p>
+        </div>
+    </div>
+    
+    <div class="processing" id="processing">
+        <h3>⏳ Processing...</h3>
+        <p>AI is reading your prescription...</p>
+    </div>
+    
+    <div id="results" style="margin-top: 1rem;"></div>
+</div>
+
+<script>
+    let video = document.getElementById('camera');
+    let canvas = document.getElementById('canvas');
+    let ctx = canvas.getContext('2d');
+    let stream = null;
+    let cameraActive = false;
+    
+    // Tab switching
+    function switchTab(tab) {
+        const cameraCont = document.getElementById('camera-tab-content');
+        const uploadCont = document.getElementById('upload-tab-content');
+        const cameraTab = document.getElementById('camera-tab');
+        const uploadTab = document.getElementById('upload-tab');
+        
+        if (tab === 'camera') {
+            cameraCont.style.display = 'block';
+            uploadCont.style.display = 'none';
+            cameraTab.style.color = '#3498db';
+            cameraTab.style.borderBottom = '3px solid #3498db';
+            uploadTab.style.color = '#999';
+            uploadTab.style.borderBottom = 'none';
+            startCamera();
+        } else {
+            cameraCont.style.display = 'none';
+            uploadCont.style.display = 'block';
+            cameraTab.style.color = '#999';
+            cameraTab.style.borderBottom = 'none';
+            uploadTab.style.color = '#3498db';
+            uploadTab.style.borderBottom = '3px solid #3498db';
+            stopCamera();
+        }
+    }
+    
+    // File upload handler
+    document.getElementById('prescription-file-input').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const formData = new FormData();
+            formData.append('image', file);
+            
+            document.getElementById('processing').style.display = 'block';
+            
+            fetch('/api/patient/process-prescription', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('processing').style.display = 'none';
+                
+                if (data.success) {
+                    displayResults(data.medications);
+                    alert('✅ Prescription read successfully!');
+                } else {
+                    alert('❌ Error: ' + data.error);
+                }
+            })
+            .catch(err => {
+                document.getElementById('processing').style.display = 'none';
+                alert('Error processing prescription: ' + err.message);
+            });
+        };
+        reader.readAsDataURL(file);
+    });
+    
+    async function startCamera() {
+        if (cameraActive) return;
+        
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment' }
+            });
+            video.srcObject = stream;
+            cameraActive = true;
+        } catch (err) {
+            alert('Camera access denied. Please allow camera access or use Upload option.');
+        }
+    }
+    
+    function stopCamera() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            cameraActive = false;
+        }
+    }
+    
+    function toggleCamera() {
+        stopCamera();
+        startCamera();
+    }
+    
+    function capturePhoto() {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        
+        canvas.toBlob(async (blob) => {
+            const formData = new FormData();
+            formData.append('image', blob, 'prescription.jpg');
+            
+            document.getElementById('processing').style.display = 'block';
+            
+            try {
+                const response = await fetch('/api/patient/process-prescription', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                document.getElementById('processing').style.display = 'none';
+                
+                if (data.success) {
+                    displayResults(data.medications);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (err) {
+                document.getElementById('processing').style.display = 'none';
+                alert('Error processing prescription: ' + err.message);
+            }
+        }, 'image/jpeg');
+    }
+    
+    function displayResults(medications) {
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML = `
+            <div class="card" style="background: #e8f5e9; border-left: 4px solid #4caf50;">
+                <h3>✅ Prescription Read Successfully!</h3>
+                <p style="margin-top: 0.5rem; color: #2e7d32;">
+                    Found ${medications.length} medications. Reminders have been set!
+                </p>
+                
+                <div style="margin-top: 1rem;">
+                    ${medications.map(med => `
+                        <div class="med-result">
+                            <strong>💊 ${med.name}</strong><br>
+                            <small>
+                                Dosage: ${med.dosage} | 
+                                Frequency: ${med.frequency} | 
+                                Duration: ${med.duration}
+                            </small>
+                            <button class="buy-btn" onclick="buyMedicine('${med.name}')">
+                                🛒 Buy Now
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div style="margin-top: 1.5rem;">
+                    <a href="{{ url_for('patient_reminders') }}" class="btn">View Reminders</a>
+                    <a href="{{ url_for('patient_dashboard') }}" class="btn btn-secondary" style="margin-left: 0.5rem;">Back to Dashboard</a>
+                </div>
+            </div>
+        `;
+    }
+    
+    function buyMedicine(medicineName) {
+        fetch(`/api/patient/buy-medicine/${medicineName}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    window.open(data.link, '_blank');
+                }
+            });
+    }
+    
+    startCamera();
+</script>
+{% endblock %}

@@ -1,0 +1,389 @@
+{% extends "base.html" %}
+
+{% block title %}Patient Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .welcome-banner {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2.5rem;
+        border-radius: 16px;
+        margin-bottom: 2rem;
+        box-shadow: 0 20px 25px -5px rgba(102, 126, 234, 0.3);
+    }
+    
+    .welcome-banner h2 {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .welcome-banner p {
+        opacity: 0.95;
+        font-size: 1.05rem;
+    }
+    
+    .blockchain-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        margin-top: 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+    
+    .dashboard-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        text-align: center;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .dashboard-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--primary), var(--secondary));
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 25px -5px rgba(0,0,0,0.15);
+        border-color: var(--primary);
+    }
+    
+    .dashboard-card h3 {
+        font-size: 1.3rem;
+        margin-bottom: 0.75rem;
+        color: var(--dark);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+    
+    .dashboard-card h3 i {
+        font-size: 1.5rem;
+    }
+    
+    .dashboard-card .number {
+        font-size: 3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 1rem 0;
+    }
+    
+    .dashboard-card .description {
+        color: #6b7280;
+        margin-bottom: 1.5rem;
+        font-size: 0.95rem;
+    }
+    
+    .dashboard-card .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .feature-badge {
+        display: inline-block;
+        background: #f3f4f6;
+        color: #6b7280;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        margin-top: 0.5rem;
+    }
+    
+    .reminder-section {
+        background: linear-gradient(135deg, #fff3cd, #ffe69c);
+        border-left: 4px solid var(--warning);
+    }
+    
+    .reminder-item {
+        background: white;
+        padding: 1.25rem;
+        border-radius: 12px;
+        margin-bottom: 0.75rem;
+        border-left: 4px solid var(--warning);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.3s ease;
+    }
+    
+    .reminder-item:hover {
+        transform: translateX(4px);
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+    
+    .reminder-time {
+        color: var(--danger);
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+    
+    .refill-alert {
+        background: linear-gradient(135deg, #fee2e2, #fecaca);
+        border-left: 4px solid var(--danger);
+    }
+    
+    .refill-item {
+        background: white;
+        padding: 1.25rem;
+        border-radius: 12px;
+        margin-bottom: 0.75rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.3s ease;
+    }
+    
+    .refill-item:hover {
+        transform: translateX(4px);
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .stat-card {
+        background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+        padding: 1.5rem;
+        border-radius: 12px;
+        text-align: center;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary);
+    }
+    
+    .stat-label {
+        color: #6b7280;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="welcome-banner">
+    <h2><i class="fas fa-hand-sparkles"></i> Welcome back, {{ user.name }}!</h2>
+    <p>Your health management dashboard - All records secured with blockchain technology</p>
+    <div style="display: flex; gap: 1rem; margin-top: 1rem; flex-wrap: wrap;">
+        <div class="blockchain-status">
+            <i class="fas fa-check-circle"></i> Blockchain Active & Verified
+        </div>
+        <a href="{{ url_for('patient_emergency_doctors') }}" class="blockchain-status" style="background: rgba(255, 255, 255, 0.3); text-decoration: none; color: white; animation: pulse 2s infinite;">
+            <i class="fas fa-ambulance"></i> Emergency Doctors
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <h3 style="margin-bottom: 1rem;"><i class="fas fa-chart-line"></i> Quick Stats</h3>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{{ reminders|length }}</div>
+            <div class="stat-label">Active Reminders</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ prescriptions|length }}</div>
+            <div class="stat-label">Prescriptions</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ refill_alerts|length if refill_alerts else 0 }}</div>
+            <div class="stat-label">Refill Alerts</div>
+        </div>
+    </div>
+</div>
+
+<h3 style="margin: 2rem 0 1rem; color: var(--dark); font-size: 1.5rem;">
+    <i class="fas fa-th-large"></i> Healthcare Features
+</h3>
+
+<div class="dashboard-grid">
+    <div class="dashboard-card">
+        <h3><i class="fas fa-camera" style="color: #667eea;"></i> Snap Prescription</h3>
+        <p class="description">Take a photo of your prescription and get instant digital records</p>
+        <a href="{{ url_for('patient_snap_prescription') }}" class="btn">
+            <i class="fas fa-camera"></i> Snap Now
+        </a>
+        <div class="feature-badge"><i class="fas fa-shield-alt"></i> Blockchain Secured</div>
+    </div>
+    
+    <div class="dashboard-card">
+        <h3><i class="fas fa-bell" style="color: #f5576c;"></i> Medicine Reminders</h3>
+        <div class="number">{{ reminders|length }}</div>
+        <p class="description">Never miss your medication schedule</p>
+        <a href="{{ url_for('patient_reminders') }}" class="btn">
+            <i class="fas fa-bell"></i> View Reminders
+        </a>
+    </div>
+    
+    <div class="dashboard-card">
+        <h3><i class="fas fa-file-medical" style="color: #00f2fe;"></i> Prescriptions</h3>
+        <div class="number">{{ prescriptions|length }}</div>
+        <p class="description">Access all your medical prescriptions</p>
+        <a href="{{ url_for('patient_prescriptions') }}" class="btn">
+            <i class="fas fa-file-medical"></i> View All
+        </a>
+    </div>
+    
+    <div class="dashboard-card">
+        <h3><i class="fas fa-shopping-cart" style="color: #38f9d7;"></i> Buy Medicines</h3>
+        <p class="description">Order medicines from trusted pharmacies</p>
+        <a href="https://www.1mg.com" target="_blank" class="btn">
+            <i class="fas fa-external-link-alt"></i> 1mg Pharmacy
+        </a>
+        <div class="feature-badge"><i class="fas fa-truck"></i> Home Delivery</div>
+    </div>
+    
+    <div class="dashboard-card" style="border-left: 4px solid #ff0844;">
+        <h3><i class="fas fa-user-md" style="color: #ff0844;"></i> Emergency Doctors</h3>
+        <p class="description">Mumbai area doctors with 24/7 emergency contact</p>
+        <a href="{{ url_for('patient_emergency_doctors') }}" class="btn" style="background: linear-gradient(135deg, #ff0844 0%, #ffb199 100%);">
+            <i class="fas fa-ambulance"></i> View Doctors
+        </a>
+        <div class="feature-badge" style="background: #fee2e2; color: #991b1b;"><i class="fas fa-phone-volume"></i> 24/7 Available</div>
+    </div>
+    
+    <div class="dashboard-card">
+        <h3><i class="fas fa-exclamation-triangle" style="color: #fa709a;"></i> Drug Side Effects</h3>
+        <p class="description">Check medication warnings and interactions</p>
+        <a href="{{ url_for('patient_drug_side_effects') }}" class="btn">
+            <i class="fas fa-search"></i> Check Now
+        </a>
+    </div>
+    
+    <div class="dashboard-card">
+        <h3><i class="fas fa-chart-bar" style="color: #fed6e3;"></i> Adherence Tracking</h3>
+        <p class="description">Monitor your medication compliance</p>
+        <a href="{{ url_for('patient_adherence_tracking') }}" class="btn">
+            <i class="fas fa-chart-bar"></i> View Stats
+        </a>
+        <div class="feature-badge"><i class="fas fa-trophy"></i> Track Progress</div>
+    </div>
+    
+    <div class="dashboard-card">
+        <h3><i class="fas fa-flask" style="color: #ff6a88;"></i> Lab Reports</h3>
+        <p class="description">Upload and manage test results</p>
+        <a href="{{ url_for('patient_lab_reports') }}" class="btn">
+            <i class="fas fa-upload"></i> Upload Report
+        </a>
+        <div class="feature-badge"><i class="fas fa-lock"></i> Encrypted Storage</div>
+    </div>
+    
+    <div class="dashboard-card">
+        <h3><i class="fas fa-comments" style="color: #f5576c;"></i> Doctor Messages</h3>
+        <p class="description">Secure communication with your doctor</p>
+        <a href="{{ url_for('patient_messages') }}" class="btn">
+            <i class="fas fa-envelope"></i> Open Messages
+        </a>
+    </div>
+    
+    <div class="dashboard-card">
+        <h3><i class="fas fa-video" style="color: #00f2fe;"></i> Telemedicine</h3>
+        <p class="description">Video consultation with doctors</p>
+        <a href="{{ url_for('patient_telemedicine') }}" class="btn">
+            <i class="fas fa-calendar-plus"></i> Book Appointment
+        </a>
+        <div class="feature-badge"><i class="fas fa-video"></i> HD Video Call</div>
+    </div>
+</div>
+
+{% if refill_alerts %}
+<div class="card refill-alert" style="margin-top: 2rem;">
+    <h3 style="color: var(--danger); margin-bottom: 1rem;">
+        <i class="fas fa-exclamation-circle"></i> Medication Refill Alerts
+    </h3>
+    <p style="color: #991b1b; margin-bottom: 1rem;">These medications need to be refilled soon:</p>
+    <div>
+        {% for alert in refill_alerts %}
+        <div class="refill-item">
+            <div>
+                <strong style="font-size: 1.1rem;">{{ alert.medication }}</strong> - {{ alert.dosage }}<br>
+                <small style="color: #6b7280;">
+                    <i class="fas fa-calendar-alt"></i> Refill by: {{ alert.refill_date[:10] }}
+                </small>
+            </div>
+            <button class="btn" style="background: linear-gradient(135deg, #ff9800, #ff5722);" onclick="buyMedicine('{{ alert.medication }}')">
+                <i class="fas fa-shopping-cart"></i> Refill Now
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if reminders %}
+<div class="card reminder-section" style="margin-top: 2rem;">
+    <h3 style="color: var(--warning); margin-bottom: 1rem;">
+        <i class="fas fa-clock"></i> Today's Medicine Schedule
+    </h3>
+    <div>
+        {% for reminder in reminders[:5] %}
+        <div class="reminder-item">
+            <div>
+                <strong style="font-size: 1.1rem;">{{ reminder.medication }}</strong> - {{ reminder.dosage }}<br>
+                <small style="color: #6b7280;">
+                    <i class="fas fa-repeat"></i> {{ reminder.frequency }}
+                </small>
+            </div>
+            <span class="reminder-time">
+                {% if reminder.times %}
+                    <i class="fas fa-bell"></i> {{ reminder.times[0] }}
+                {% endif %}
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+    {% if reminders|length > 5 %}
+    <div style="text-align: center; margin-top: 1rem;">
+        <a href="{{ url_for('patient_reminders') }}" class="btn">
+            <i class="fas fa-list"></i> View All {{ reminders|length }} Reminders
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<script>
+function buyMedicine(medicineName) {
+    fetch(`/api/patient/buy-medicine/${medicineName}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                window.open(data.link, '_blank');
+            }
+        });
+}
+</script>
+{% endblock %}

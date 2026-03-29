@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}Medical History - Senior Care App{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <h2>📋 Medical History</h2>
+        <p class="text-muted">Complete medical history, prescriptions, and health records</p>
+    </div>
+    
+    <div class="card" style="margin-top: 20px;">
+        <h3>Personal Health Information</h3>
+        <div class="health-info-grid">
+            <div class="info-item">
+                <strong>Name:</strong>
+                <p>{{ patient.name }}</p>
+            </div>
+            <div class="info-item">
+                <strong>Age:</strong>
+                <p>{{ patient.age }} years</p>
+            </div>
+            <div class="info-item">
+                <strong>Blood Group:</strong>
+                <p>{{ patient.blood_group }}</p>
+            </div>
+            <div class="info-item">
+                <strong>Phone:</strong>
+                <p>{{ patient.phone }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card" style="margin-top: 20px;">
+        <h3>🚨 Allergies (IMPORTANT)</h3>
+        {% if patient.allergies %}
+            <div class="allergies-list">
+                {% for allergy in patient.allergies %}
+                <div class="allergy-badge">
+                    ⚠️ {{ allergy }}
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted">No allergies recorded.</p>
+        {% endif %}
+    </div>
+    
+    <div class="card" style="margin-top: 20px;">
+        <h3>Medical Conditions</h3>
+        {% if patient.current_conditions %}
+            <div class="conditions-list">
+                {% for condition in patient.current_conditions %}
+                <div class="condition-item">
+                    <strong>{{ condition }}</strong>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted">No current conditions recorded.</p>
+        {% endif %}
+    </div>
+    
+    <div class="card" style="margin-top: 20px;">
+        <h3>Medical History</h3>
+        {% if patient.medical_history %}
+            <div class="history-list">
+                {% for history in patient.medical_history %}
+                <div class="history-item">
+                    <strong>{{ history }}</strong>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted">No medical history recorded.</p>
+        {% endif %}
+    </div>
+    
+    <div class="card" style="margin-top: 20px;">
+        <h3>Insurance Information</h3>
+        {% if patient.insurance_id %}
+            <div class="insurance-info">
+                <p><strong>Insurance Provider:</strong> {{ patient.insurance_provider }}</p>
+                <p><strong>Insurance ID:</strong> {{ patient.insurance_id }}</p>
+                <p class="text-muted">This is covered under Ayushman Bharat (PMJAY) scheme</p>
+            </div>
+        {% else %}
+            <p class="text-muted">No insurance information recorded.</p>
+        {% endif %}
+    </div>
+    
+    <div class="card" style="margin-top: 20px;">
+        <h3>Prescriptions</h3>
+        {% if prescriptions %}
+            <div class="prescriptions-list">
+                {% for prescription in prescriptions|reverse %}
+                <div class="prescription-card">
+                    <div class="prescription-header">
+                        <h4>Dr. {{ prescription.doctor_name }}</h4>
+                        <span class="prescription-date">{{ prescription.created_at[:10] }}</span>
+                    </div>
+                    <div class="prescription-medications">
+                        <strong>Medications:</strong>
+                        <ul>
+                            {% for med in prescription.medications %}
+                            <li>{{ med.name }} - {{ med.dosage }} ({{ med.frequency }})</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% if prescription.notes %}
+                    <div class="prescription-notes">
+                        <strong>Notes:</strong>
+                        <p>{{ prescription.notes }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted">No prescriptions recorded yet.</p>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.health-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.info-item {
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #3498db;
+}
+
+.info-item strong {
+    display: block;
+    margin-bottom: 8px;
+    color: #2c3e50;
+}
+
+.info-item p {
+    margin: 0;
+    font-size: 16px;
+}
+
+.allergies-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.allergy-badge {
+    padding: 12px 16px;
+    background: #ffe6e6;
+    color: #c92a2a;
+    border-radius: 20px;
+    font-weight: bold;
+    border: 2px solid #ff6b6b;
+}
+
+.conditions-list,
+.history-list {
+    display: grid;
+    gap: 10px;
+}
+
+.condition-item,
+.history-item {
+    padding: 12px;
+    background: #f0f7ff;
+    border-left: 4px solid #3498db;
+    border-radius: 4px;
+}
+
+.insurance-info {
+    padding: 15px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 8px;
+}
+
+.insurance-info p {
+    margin: 8px 0;
+}
+
+.prescriptions-list {
+    display: grid;
+    gap: 15px;
+}
+
+.prescription-card {
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+}
+
+.prescription-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.prescription-header h4 {
+    margin: 0;
+}
+
+.prescription-date {
+    font-size: 12px;
+    color: #666;
+}
+
+.prescription-medications ul {
+    margin: 10px 0 0 20px;
+    padding: 0;
+}
+
+.prescription-medications li {
+    margin: 5px 0;
+}
+
+.prescription-notes {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #ddd;
+}
+
+.prescription-notes p {
+    margin: 8px 0 0 0;
+}
+
+@media (max-width: 768px) {
+    .health-info-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .prescription-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+</style>
+{% endblock %}

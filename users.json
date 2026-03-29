@@ -1,0 +1,50 @@
+{
+  "admin": {
+    "password": "admin123",
+    "role": "admin",
+    "name": "Administrator",
+    "type": "admin"
+  },
+  "doctor1": {
+    "password": "doc123",
+    "role": "doctor",
+    "name": "Dr. Sharma",
+    "type": "doctor",
+    "clinic": "City Clinic"
+  },
+  "patient1": {
+    "password": "pat123",
+    "role": "patient",
+    "name": "Rajesh Kumar",
+    "type": "patient",
+    "age": 65,
+    "allergies": [
+      "Penicillin",
+      "Aspirin"
+    ]
+  },
+  "memon": {
+    "password": "MEM123",
+    "role": "patient",
+    "name": "aariz",
+    "type": "patient",
+    "age": 21,
+    "phone": "8097232313",
+    "email": "vellabrother13@gmail.com",
+    "blood_group": "AB+",
+    "allergies": [
+      "Penicillin",
+      "Ibuprofen"
+    ],
+    "medical_history": [
+      "Diabetes",
+      "Hypertension"
+    ],
+    "current_medications": "",
+    "insurance_provider": "Aditya Birla",
+    "insurance_id": "sasqqwqeewe",
+    "emergency_contact_name": "chandu",
+    "emergency_contact_phone": "9897889880",
+    "created_at": "2026-03-30T02:17:11.786722"
+  }
+}

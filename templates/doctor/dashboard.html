@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Doctor Dashboard{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Doctor Dashboard</h2>
+    <p style="margin-top: 1rem; font-size: 1.1rem;">
+        Welcome, {{ user.name }}!
+    </p>
+    
+    <div style="margin-top: 2rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="card" style="background: #e8f4f8;">
+            <h3>📱 Scan Patient QR</h3>
+            <p>Scan patient's QR code to view their details and medical history</p>
+            <a href="{{ url_for('doctor_scan_qr') }}" class="btn" style="margin-top: 1rem;">Scan QR Code</a>
+        </div>
+        
+        <div class="card" style="background: #f0f8e8;">
+            <h3>📝 Write Prescription</h3>
+            <p>Write digital prescriptions for patients</p>
+            <p style="margin-top: 0.5rem; font-size: 0.9rem; color: #666;">
+                First scan a patient QR code
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

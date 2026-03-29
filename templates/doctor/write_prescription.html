@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}Write Prescription{% endblock %}
+
+{% block extra_css %}
+<style>
+    .patient-header {
+        background: #e8f4f8;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .med-form {
+        background: #f9f9f9;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    
+    label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+        font-size: 1rem;
+    }
+    
+    input, textarea, select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 1rem;
+    }
+    
+    input:focus, textarea:focus, select:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+    }
+    
+    .med-list {
+        background: #f0f8ff;
+        padding: 1rem;
+        border-radius: 8px;
+        margin: 1rem 0;
+    }
+    
+    .med-item {
+        background: white;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        border-left: 4px solid #3498db;
+        border-radius: 4px;
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    
+    .btn-secondary {
+        background: #6c757d;
+    }
+    
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>✍️ Write Prescription</h2>
+    
+    <div class="patient-header">
+        <h3>{{ patient.name }}</h3>
+        <p><strong>Age:</strong> {{ patient.age }} | <strong>Phone:</strong> {{ patient.phone }}</p>
+        <p style="color: #d9534f;"><strong>⚠️ Allergies:</strong> {{ patient.allergies|join(', ') }}</p>
+    </div>
+    
+    <form id="prescription-form">
+        <div class="form-group">
+            <label>Add Medications:</label>
+            
+            <div class="med-form">
+                <div class="form-group">
+                    <label for="med-name">Medicine Name:</label>
+                    <input type="text" id="med-name" placeholder="e.g., Amlong, Metformin" required>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label for="med-dosage">Dosage:</label>
+                        <input type="text" id="med-dosage" placeholder="e.g., 5mg, 500mg" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="med-frequency">Frequency:</label>
+                        <select id="med-frequency" required>
+                            <option value="">Select frequency</option>
+                            <option value="Once daily">Once daily</option>
+                            <option value="Twice daily">Twice daily</option>
+                            <option value="Thrice daily">Thrice daily</option>
+                            <option value="As needed">As needed</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="med-duration">Duration (days):</label>
+                    <input type="number" id="med-duration" placeholder="30" value="30" required>
+                </div>
+                
+                <button type="button" class="btn btn-secondary" onclick="addMedication()">+ Add Medicine</button>
+            </div>
+        </div>
+        
+        <div id="medications-list" class="med-list" style="display: none;">
+            <h4>Medications Added:</h4>
+            <div id="meds-display"></div>
+        </div>
+        
+        <div class="form-group">
+            <label for="notes">Additional Notes:</label>
+            <textarea id="notes" rows="4" placeholder="Any special instructions..."></textarea>
+        </div>
+        
+        <div class="btn-group">
+            <button type="submit" class="btn" style="background: #28a745;">💾 Save Prescription</button>
+            <a href="{{ url_for('doctor_dashboard') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    let medications = [];
+    
+    function addMedication() {
+        const name = document.getElementById('med-name').value;
+        const dosage = document.getElementById('med-dosage').value;
+        const frequency = document.getElementById('med-frequency').value;
+        const duration = document.getElementById('med-duration').value;
+        
+        if (!name || !dosage || !frequency) {
+            alert('Please fill all fields');
+            return;
+        }
+        
+        medications.push({ name, dosage, frequency, duration });
+        
+        // Clear form
+        document.getElementById('med-name').value = '';
+        document.getElementById('med-dosage').value = '';
+        document.getElementById('med-frequency').value = '';
+        document.getElementById('med-duration').value = '30';
+        
+        updateMedicationsList();
+    }
+    
+    function updateMedicationsList() {
+        const display = document.getElementById('meds-display');
+        display.innerHTML = medications.map((med, idx) => `
+            <div class="med-item">
+                <strong>${med.name}</strong> - ${med.dosage}<br>
+                <small>${med.frequency} for ${med.duration} days</small>
+                <button type="button" onclick="removeMedication(${idx})" style="float: right; background: #dc3545; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer;">Remove</button>
+            </div>
+        `).join('');
+        
+        document.getElementById('medications-list').style.display = medications.length > 0 ? 'block' : 'none';
+    }
+    
+    function removeMedication(idx) {
+        medications.splice(idx, 1);
+        updateMedicationsList();
+    }
+    
+    document.getElementById('prescription-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        if (medications.length === 0) {
+            alert('Please add at least one medication');
+            return;
+        }
+        
+        const response = await fetch('/api/doctor/save-prescription', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                patient_id: '{{ patient.id }}',
+                medications: medications,
+                notes: document.getElementById('notes').value
+            })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            alert('✅ Prescription saved successfully!');
+            window.location.href = '{{ url_for("doctor_dashboard") }}';
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+</script>
+{% endblock %}

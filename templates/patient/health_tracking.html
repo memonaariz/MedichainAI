@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block title %}Health Tracking - Senior Care App{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <h2>📊 Health Tracking</h2>
+        <p class="text-muted">Track your blood pressure, blood sugar, and weight</p>
+        
+        <div class="tabs">
+            <button class="tab-button active" onclick="switchTab('bp')">Blood Pressure</button>
+            <button class="tab-button" onclick="switchTab('sugar')">Blood Sugar</button>
+            <button class="tab-button" onclick="switchTab('weight')">Weight</button>
+        </div>
+        
+        <!-- Blood Pressure Tab -->
+        <div id="bp-tab" class="tab-content active">
+            <h3>Blood Pressure Readings</h3>
+            <div class="add-metric-form">
+                <input type="number" id="bp-systolic" placeholder="Systolic (e.g., 120)" min="0" max="300">
+                <span>/</span>
+                <input type="number" id="bp-diastolic" placeholder="Diastolic (e.g., 80)" min="0" max="200">
+                <button class="btn btn-primary" onclick="addMetric('blood_pressure', 'mmHg')">Add Reading</button>
+            </div>
+            
+            <div class="metrics-list">
+                {% if bp_readings %}
+                    {% for reading in bp_readings|reverse %}
+                    <div class="metric-card">
+                        <div class="metric-value">{{ reading.value }} {{ reading.unit }}</div>
+                        <div class="metric-date">{{ reading.recorded_at[:10] }}</div>
+                        {% if reading.notes %}
+                        <div class="metric-notes">{{ reading.notes }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No blood pressure readings yet.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Blood Sugar Tab -->
+        <div id="sugar-tab" class="tab-content">
+            <h3>Blood Sugar Readings</h3>
+            <div class="add-metric-form">
+                <input type="number" id="sugar-value" placeholder="Blood Sugar Level" min="0" max="500">
+                <select id="sugar-unit">
+                    <option value="mg/dL">mg/dL</option>
+                    <option value="mmol/L">mmol/L</option>
+                </select>
+                <button class="btn btn-primary" onclick="addMetric('blood_sugar', 'mg/dL')">Add Reading</button>
+            </div>
+            
+            <div class="metrics-list">
+                {% if sugar_readings %}
+                    {% for reading in sugar_readings|reverse %}
+                    <div class="metric-card">
+                        <div class="metric-value">{{ reading.value }} {{ reading.unit }}</div>
+                        <div class="metric-date">{{ reading.recorded_at[:10] }}</div>
+                        {% if reading.notes %}
+                        <div class="metric-notes">{{ reading.notes }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No blood sugar readings yet.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Weight Tab -->
+        <div id="weight-tab" class="tab-content">
+            <h3>Weight Readings</h3>
+            <div class="add-metric-form">
+                <input type="number" id="weight-value" placeholder="Weight" min="0" max="300" step="0.1">
+                <select id="weight-unit">
+                    <option value="kg">kg</option>
+                    <option value="lbs">lbs</option>
+                </select>
+                <button class="btn btn-primary" onclick="addMetric('weight', 'kg')">Add Reading</button>
+            </div>
+            
+            <div class="metrics-list">
+                {% if weight_readings %}
+                    {% for reading in weight_readings|reverse %}
+                    <div class="metric-card">
+                        <div class="metric-value">{{ reading.value }} {{ reading.unit }}</div>
+                        <div class="metric-date">{{ reading.recorded_at[:10] }}</div>
+                        {% if reading.notes %}
+                        <div class="metric-notes">{{ reading.notes }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No weight readings yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #eee;
+}
+
+.tab-button {
+    padding: 12px 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    color: #666;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.tab-button.active {
+    color: #3498db;
+    border-bottom-color: #3498db;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.add-metric-form {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.add-metric-form input,
+.add-metric-form select {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.add-metric-form input {
+    flex: 1;
+    min-width: 150px;
+}
+
+.add-metric-form select {
+    min-width: 100px;
+}
+
+.metrics-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.metric-card {
+    padding: 15px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.metric-value {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.metric-date {
+    font-size: 12px;
+    opacity: 0.9;
+}
+
+.metric-notes {
+    font-size: 12px;
+    margin-top: 8px;
+    font-style: italic;
+}
+
+@media (max-width: 768px) {
+    .tabs {
+        flex-wrap: wrap;
+    }
+    
+    .add-metric-form {
+        flex-direction: column;
+    }
+    
+    .add-metric-form input,
+    .add-metric-form select {
+        width: 100%;
+    }
+    
+    .metrics-list {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+function switchTab(tabName) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Show selected tab
+    document.getElementById(tabName + '-tab').classList.add('active');
+    event.target.classList.add('active');
+}
+
+function addMetric(metricType, unit) {
+    let value;
+    
+    if (metricType === 'blood_pressure') {
+        const systolic = document.getElementById('bp-systolic').value;
+        const diastolic = document.getElementById('bp-diastolic').value;
+        
+        if (!systolic || !diastolic) {
+            alert('Please enter both systolic and diastolic values');
+            return;
+        }
+        
+        value = `${systolic}/${diastolic}`;
+    } else if (metricType === 'blood_sugar') {
+        value = document.getElementById('sugar-value').value;
+        unit = document.getElementById('sugar-unit').value;
+    } else if (metricType === 'weight') {
+        value = document.getElementById('weight-value').value;
+        unit = document.getElementById('weight-unit').value;
+    }
+    
+    if (!value) {
+        alert('Please enter a value');
+        return;
+    }
+    
+    fetch('/api/patient/add-health-metric', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            metric_type: metricType,
+            value: value,
+            unit: unit,
+            notes: ''
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Reading added successfully!');
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+</script>
+{% endblock %}

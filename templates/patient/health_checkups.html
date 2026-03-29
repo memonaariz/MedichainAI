@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block title %}Health Checkups - Senior Care App{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <h2>📅 Health Checkups & Appointments</h2>
+        <p class="text-muted">Schedule and manage your doctor appointments and health checkups</p>
+        
+        <button class="btn btn-primary" onclick="showScheduleForm()">+ Schedule Appointment</button>
+        
+        <div id="scheduleForm" style="display:none; margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+            <h3>Schedule New Appointment</h3>
+            <form id="appointmentForm">
+                <div class="form-group">
+                    <label>Doctor Name *</label>
+                    <input type="text" id="doctorName" class="form-control" placeholder="e.g., Dr. Sharma" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Hospital/Clinic Name *</label>
+                    <input type="text" id="hospitalName" class="form-control" placeholder="e.g., City Hospital" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Appointment Type *</label>
+                    <select id="appointmentType" class="form-control" required>
+                        <option value="">Select Type</option>
+                        <option value="General Checkup">General Checkup</option>
+                        <option value="Diabetes Checkup">Diabetes Checkup</option>
+                        <option value="Blood Pressure Checkup">Blood Pressure Checkup</option>
+                        <option value="Heart Checkup">Heart Checkup</option>
+                        <option value="Lab Test">Lab Test</option>
+                        <option value="Follow-up">Follow-up</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Appointment Date *</label>
+                    <input type="date" id="appointmentDate" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Appointment Time *</label>
+                    <input type="time" id="appointmentTime" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="notes" class="form-control" rows="3" placeholder="Any special notes or symptoms to discuss"></textarea>
+                </div>
+                
+                <button type="button" class="btn btn-success" onclick="scheduleAppointment()">Schedule Appointment</button>
+                <button type="button" class="btn btn-secondary" onclick="hideScheduleForm()">Cancel</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card" style="margin-top: 20px;">
+        <h3>Upcoming Appointments</h3>
+        {% if appointments %}
+            <div class="appointments-list">
+                {% for appointment in appointments %}
+                {% if appointment.status == 'scheduled' %}
+                <div class="appointment-card upcoming">
+                    <div class="appointment-header">
+                        <h4>{{ appointment.doctor_name }}</h4>
+                        <span class="appointment-type">{{ appointment.appointment_type }}</span>
+                    </div>
+                    <div class="appointment-details">
+                        <p><strong>Hospital:</strong> {{ appointment.hospital_name }}</p>
+                        <p><strong>Date:</strong> 📅 {{ appointment.appointment_date }}</p>
+                        <p><strong>Time:</strong> 🕐 {{ appointment.appointment_time }}</p>
+                        {% if appointment.notes %}
+                        <p><strong>Notes:</strong> {{ appointment.notes }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="appointment-actions">
+                        <button class="btn btn-sm btn-primary" onclick="editAppointment('{{ appointment.id }}')">Edit</button>
+                        <button class="btn btn-sm btn-danger" onclick="cancelAppointment('{{ appointment.id }}')">Cancel</button>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted">No upcoming appointments. Schedule one to stay on top of your health.</p>
+        {% endif %}
+    </div>
+    
+    <div class="card" style="margin-top: 20px;">
+        <h3>Past Appointments</h3>
+        {% if appointments %}
+            <div class="appointments-list">
+                {% for appointment in appointments %}
+                {% if appointment.status != 'scheduled' %}
+                <div class="appointment-card past">
+                    <div class="appointment-header">
+                        <h4>{{ appointment.doctor_name }}</h4>
+                        <span class="appointment-status">{{ appointment.status }}</span>
+                    </div>
+                    <div class="appointment-details">
+                        <p><strong>Hospital:</strong> {{ appointment.hospital_name }}</p>
+                        <p><strong>Date:</strong> 📅 {{ appointment.appointment_date }}</p>
+                        <p><strong>Type:</strong> {{ appointment.appointment_type }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted">No past appointments.</p>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.appointments-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+}
+
+.appointment-card {
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid;
+}
+
+.appointment-card.upcoming {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-color: #667eea;
+}
+
+.appointment-card.past {
+    background: #f8f9fa;
+    border-color: #ddd;
+}
+
+.appointment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.appointment-header h4 {
+    margin: 0;
+}
+
+.appointment-type,
+.appointment-status {
+    display: inline-block;
+    padding: 4px 12px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.appointment-details {
+    margin-bottom: 15px;
+}
+
+.appointment-details p {
+    margin: 8px 0;
+    font-size: 14px;
+}
+
+.appointment-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-sm {
+    padding: 8px 12px;
+    font-size: 14px;
+}
+
+@media (max-width: 768px) {
+    .appointment-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .appointment-actions {
+        flex-direction: column;
+    }
+    
+    .btn-sm {
+        width: 100%;
+    }
+}
+</style>
+
+<script>
+function showScheduleForm() {
+    document.getElementById('scheduleForm').style.display = 'block';
+    // Set minimum date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('appointmentDate').min = today;
+}
+
+function hideScheduleForm() {
+    document.getElementById('scheduleForm').style.display = 'none';
+    document.getElementById('appointmentForm').reset();
+}
+
+function scheduleAppointment() {
+    const doctorName = document.getElementById('doctorName').value;
+    const hospitalName = document.getElementById('hospitalName').value;
+    const appointmentType = document.getElementById('appointmentType').value;
+    const appointmentDate = document.getElementById('appointmentDate').value;
+    const appointmentTime = document.getElementById('appointmentTime').value;
+    const notes = document.getElementById('notes').value;
+    
+    if (!doctorName || !hospitalName || !appointmentType || !appointmentDate || !appointmentTime) {
+        alert('Please fill in all required fields');
+        return;
+    }
+    
+    fetch('/api/patient/schedule-appointment', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            doctor_name: doctorName,
+            hospital_name: hospitalName,
+            appointment_type: appointmentType,
+            appointment_date: appointmentDate,
+            appointment_time: appointmentTime,
+            notes: notes
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Appointment scheduled successfully!');
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function editAppointment(appointmentId) {
+    alert('Edit feature coming soon');
+}
+
+function cancelAppointment(appointmentId) {
+    if (confirm('Are you sure you want to cancel this appointment?')) {
+        alert('Appointment cancellation feature coming soon');
+    }
+}
+</script>
+{% endblock %}

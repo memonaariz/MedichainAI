@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+
+{% block title %}Medicine Interaction Checker - Senior Care App{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <h2>💊 Medicine Interaction Checker</h2>
+        <p class="text-muted">Check if your medicines interact with each other</p>
+        
+        <div class="interaction-checker">
+            <div class="medicine-input-group">
+                <input type="text" id="medicineInput" placeholder="Enter medicine name (e.g., Aspirin, Metformin)" class="form-control">
+                <button class="btn btn-primary" onclick="addMedicine()">Add Medicine</button>
+            </div>
+            
+            <div id="medicineList" class="medicine-list">
+                <!-- Medicines will be added here -->
+            </div>
+            
+            <button class="btn btn-success btn-lg" onclick="checkInteractions()" style="width: 100%; margin-top: 20px;">
+                Check for Interactions
+            </button>
+        </div>
+        
+        <div id="resultsContainer" style="display:none; margin-top: 30px;">
+            <h3>Interaction Results</h3>
+            <div id="interactionResults"></div>
+        </div>
+    </div>
+    
+    <div class="card" style="margin-top: 20px;">
+        <h3>Common Medicine Interactions</h3>
+        <div class="interaction-info">
+            <div class="interaction-item high">
+                <strong>HIGH RISK:</strong> Aspirin + Warfarin
+                <p>Increased bleeding risk. Consult your doctor.</p>
+            </div>
+            <div class="interaction-item medium">
+                <strong>MEDIUM RISK:</strong> Metformin + Alcohol
+                <p>May cause lactic acidosis. Avoid alcohol.</p>
+            </div>
+            <div class="interaction-item medium">
+                <strong>MEDIUM RISK:</strong> Amlong + Grapefruit
+                <p>Increases blood pressure medication effect.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.interaction-checker {
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.medicine-input-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.medicine-input-group input {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.medicine-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+    min-height: 40px;
+}
+
+.medicine-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #3498db;
+    color: white;
+    border-radius: 20px;
+    font-size: 14px;
+}
+
+.medicine-tag button {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 0;
+}
+
+#interactionResults {
+    display: grid;
+    gap: 15px;
+}
+
+.interaction-warning {
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid;
+}
+
+.interaction-warning.high {
+    background: #ffe6e6;
+    border-color: #ff6b6b;
+    color: #c92a2a;
+}
+
+.interaction-warning.medium {
+    background: #fff3cd;
+    border-color: #ffc107;
+    color: #856404;
+}
+
+.interaction-warning.low {
+    background: #d4edda;
+    border-color: #28a745;
+    color: #155724;
+}
+
+.interaction-warning strong {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.interaction-info {
+    display: grid;
+    gap: 15px;
+}
+
+.interaction-item {
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid;
+}
+
+.interaction-item.high {
+    background: #ffe6e6;
+    border-color: #ff6b6b;
+    color: #c92a2a;
+}
+
+.interaction-item.medium {
+    background: #fff3cd;
+    border-color: #ffc107;
+    color: #856404;
+}
+
+.interaction-item p {
+    margin: 8px 0 0 0;
+    font-size: 14px;
+}
+
+.btn-lg {
+    padding: 15px 30px;
+    font-size: 18px;
+}
+
+@media (max-width: 768px) {
+    .medicine-input-group {
+        flex-direction: column;
+    }
+}
+</style>
+
+<script>
+let medicines = [];
+
+function addMedicine() {
+    const input = document.getElementById('medicineInput');
+    const medicine = input.value.trim();
+    
+    if (!medicine) {
+        alert('Please enter a medicine name');
+        return;
+    }
+    
+    if (medicines.includes(medicine)) {
+        alert('This medicine is already added');
+        return;
+    }
+    
+    medicines.push(medicine);
+    input.value = '';
+    updateMedicineList();
+}
+
+function removeMedicine(medicine) {
+    medicines = medicines.filter(m => m !== medicine);
+    updateMedicineList();
+}
+
+function updateMedicineList() {
+    const list = document.getElementById('medicineList');
+    list.innerHTML = medicines.map(medicine => `
+        <div class="medicine-tag">
+            ${medicine}
+            <button onclick="removeMedicine('${medicine}')">×</button>
+        </div>
+    `).join('');
+}
+
+function checkInteractions() {
+    if (medicines.length < 2) {
+        alert('Please add at least 2 medicines to check for interactions');
+        return;
+    }
+    
+    fetch('/api/patient/check-medicine-interaction', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            medicines: medicines
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            displayResults(data.warnings);
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function displayResults(warnings) {
+    const container = document.getElementById('resultsContainer');
+    const results = document.getElementById('interactionResults');
+    
+    if (warnings.length === 0) {
+        results.innerHTML = '<div class="interaction-warning low"><strong>✓ No interactions found</strong><p>Your medicines appear to be safe to take together. However, always consult your doctor.</p></div>';
+    } else {
+        results.innerHTML = warnings.map(warning => `
+            <div class="interaction-warning ${warning.severity.toLowerCase()}">
+                <strong>⚠ ${warning.severity} RISK</strong>
+                <p><strong>${warning.medicine1}</strong> + <strong>${warning.medicine2}</strong></p>
+                <p>${warning.warning}</p>
+                <p style="margin-top: 10px; font-size: 12px; opacity: 0.8;">Please consult your doctor before taking these medicines together.</p>
+            </div>
+        `).join('');
+    }
+    
+    container.style.display = 'block';
+}
+
+// Allow Enter key to add medicine
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('medicineInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            addMedicine();
+        }
+    });
+});
+</script>
+{% endblock %}

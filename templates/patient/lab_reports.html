@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Lab Reports - MediChain{% endblock %}
+
+{% block extra_css %}
+<style>
+    .upload-area {
+        border: 2px dashed #3498db;
+        border-radius: 8px;
+        padding: 2rem;
+        text-align: center;
+        background: #f0f8ff;
+        cursor: pointer;
+    }
+    
+    .report-item {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>🏥 Lab Reports</h2>
+    <p style="color: #666; margin-top: 0.5rem;">Upload and manage your medical test reports</p>
+</div>
+
+<div class="card">
+    <h3>📤 Upload New Report</h3>
+    
+    <form id="uploadForm" style="margin-top: 1.5rem;">
+        <div class="form-group">
+            <label for="testName">Test Name</label>
+            <input type="text" id="testName" name="test_name" placeholder="e.g., Blood Test, X-Ray">
+        </div>
+        
+        <div class="form-group">
+            <label for="testDate">Test Date</label>
+            <input type="date" id="testDate" name="test_date">
+        </div>
+        
+        <div class="form-group">
+            <label for="reportFile">Upload File</label>
+            <div class="upload-area" id="uploadArea">
+                <input type="file" id="reportFile" name="file" accept=".pdf,.jpg,.jpeg,.png" style="display: none;">
+                <p style="margin: 0; color: #3498db; font-weight: bold;">📁 Click to upload</p>
+            </div>
+        </div>
+        
+        <button type="submit" class="btn" style="width: 100%; margin-top: 1rem;">Upload Report</button>
+    </form>
+</div>
+
+{% if lab_reports %}
+<div class="card" style="margin-top: 2rem;">
+    <h3>📋 Your Reports</h3>
+    <div style="margin-top: 1.5rem;">
+        {% for report in lab_reports %}
+        <div class="report-item">
+            <div>
+                <h4 style="margin: 0;">{{ report.test_name }}</h4>
+                <p style="margin: 0.3rem 0 0 0; color: #666; font-size: 0.9rem;">
+                    📅 {{ report.test_date[:10] }}
+                </p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+<script>
+const uploadArea = document.getElementById('uploadArea');
+const fileInput = document.getElementById('reportFile');
+
+uploadArea.addEventListener('click', () => fileInput.click());
+
+document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData();
+    formData.append('test_name', document.getElementById('testName').value);
+    formData.append('test_date', document.getElementById('testDate').value);
+    formData.append('file', document.getElementById('reportFile').files[0]);
+    
+    try {
+        const response = await fetch('/api/patient/upload-lab-report', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            alert('✓ Report uploaded!');
+            location.reload();
+        }
+    } catch (error) {
+        alert('❌ Upload failed');
+    }
+});
+</script>
