@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MediChain — Demo Patient QR Cards</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f0f4ff; padding: 20px; }
+  h1 { text-align:center; color:#667eea; margin-bottom:30px; }
+  .grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:24px; max-width:900px; margin:0 auto; }
+  .card {
+    background:white; border-radius:16px; padding:20px;
+    box-shadow:0 4px 16px rgba(0,0,0,0.1);
+    border-top:5px solid #667eea;
+    display:flex; gap:16px; align-items:flex-start;
+    page-break-inside: avoid;
+  }
+  .qr-side img { border-radius:8px; border:2px solid #e5e7eb; }
+  .info h2 { margin:0 0 4px; font-size:1.1rem; color:#1a1a2e; }
+  .info .pid { font-size:0.75rem; color:#9ca3af; margin-bottom:8px; font-family:monospace; }
+  .row { font-size:0.82rem; margin:3px 0; color:#374151; }
+  .row strong { color:#1a1a2e; }
+  .allergy { color:#dc2626; font-weight:700; }
+  .meds { margin-top:8px; }
+  .med-tag {
+    display:inline-block; background:#ede9fe; color:#7c3aed;
+    padding:2px 8px; border-radius:20px; font-size:0.72rem;
+    margin:2px 2px 0 0;
+  }
+  .footer { text-align:center; margin-top:8px; font-size:0.7rem; color:#9ca3af; }
+  .logo { text-align:center; font-weight:800; color:#667eea; font-size:0.9rem; margin-bottom:4px; }
+  @media print {
+    body { background:white; padding:0; }
+    .grid { gap:12px; }
+  }
+</style>
+</head>
+<body>
+<h1>🏥 MediChain — Demo Patient QR Cards</h1>
+<p style="text-align:center;color:#6b7280;margin-bottom:24px;">
+  Doctor scans these QR codes to instantly view patient details. Password for all demo patients: <strong>demo123</strong>
+</p>
+<div class="grid">
+
+  <div class="card">
+    <div class="qr-side">
+      <div class="logo">MediChain</div>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=PATIENT_demo_p1_QR" width="150" height="150" alt="QR">
+      <div class="footer">Scan to view record</div>
+    </div>
+    <div class="info">
+      <h2>Rajesh Kumar</h2>
+      <div class="pid">ID: demo_p1</div>
+      <div class="row"><strong>Age:</strong> 65 &nbsp;|&nbsp; <strong>Blood:</strong> O+</div>
+      <div class="row"><strong>Phone:</strong> 9876543210</div>
+      <div class="row"><strong>Doctor:</strong> Dr. Sharma</div>
+      <div class="row"><strong>Conditions:</strong> Type 2 Diabetes, Hypertension</div>
+      <div class="row allergy">⚠️ Allergies: Penicillin, Aspirin</div>
+      <div class="meds"><strong style="font-size:0.78rem;">Current Medicines:</strong><br><span class="med-tag">Metformin 500mg</span><span class="med-tag">Amlong 5mg</span><span class="med-tag">Ecosprin 75mg</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="qr-side">
+      <div class="logo">MediChain</div>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=PATIENT_demo_p2_QR" width="150" height="150" alt="QR">
+      <div class="footer">Scan to view record</div>
+    </div>
+    <div class="info">
+      <h2>Sunita Patel</h2>
+      <div class="pid">ID: demo_p2</div>
+      <div class="row"><strong>Age:</strong> 58 &nbsp;|&nbsp; <strong>Blood:</strong> B+</div>
+      <div class="row"><strong>Phone:</strong> 9823456710</div>
+      <div class="row"><strong>Doctor:</strong> Dr. Mehta</div>
+      <div class="row"><strong>Conditions:</strong> Hypothyroidism, Obesity</div>
+      <div class="row allergy">⚠️ Allergies: Sulfa drugs</div>
+      <div class="meds"><strong style="font-size:0.78rem;">Current Medicines:</strong><br><span class="med-tag">Thyronorm 50mcg</span><span class="med-tag">Shelcal 500mg</span><span class="med-tag">Revital</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="qr-side">
+      <div class="logo">MediChain</div>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=PATIENT_demo_p3_QR" width="150" height="150" alt="QR">
+      <div class="footer">Scan to view record</div>
+    </div>
+    <div class="info">
+      <h2>Arun Sharma</h2>
+      <div class="pid">ID: demo_p3</div>
+      <div class="row"><strong>Age:</strong> 72 &nbsp;|&nbsp; <strong>Blood:</strong> A+</div>
+      <div class="row"><strong>Phone:</strong> 9712345678</div>
+      <div class="row"><strong>Doctor:</strong> Dr. Patel</div>
+      <div class="row"><strong>Conditions:</strong> Hypertension, High Cholesterol</div>
+      <div class="row allergy">⚠️ Allergies: Ibuprofen</div>
+      <div class="meds"><strong style="font-size:0.78rem;">Current Medicines:</strong><br><span class="med-tag">Telma 40mg</span><span class="med-tag">Atorva 10mg</span><span class="med-tag">Rosuvas 10mg</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="qr-side">
+      <div class="logo">MediChain</div>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=PATIENT_demo_p4_QR" width="150" height="150" alt="QR">
+      <div class="footer">Scan to view record</div>
+    </div>
+    <div class="info">
+      <h2>Meena Joshi</h2>
+      <div class="pid">ID: demo_p4</div>
+      <div class="row"><strong>Age:</strong> 45 &nbsp;|&nbsp; <strong>Blood:</strong> AB+</div>
+      <div class="row"><strong>Phone:</strong> 9654321098</div>
+      <div class="row"><strong>Doctor:</strong> Dr. Kulkarni</div>
+      <div class="row"><strong>Conditions:</strong> Asthma, Allergic Rhinitis</div>
+      <div class="row allergy">⚠️ Allergies: None known</div>
+      <div class="meds"><strong style="font-size:0.78rem;">Current Medicines:</strong><br><span class="med-tag">Asthalin Inhaler</span><span class="med-tag">Foracort 200</span><span class="med-tag">Montek LC</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="qr-side">
+      <div class="logo">MediChain</div>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=PATIENT_demo_p5_QR" width="150" height="150" alt="QR">
+      <div class="footer">Scan to view record</div>
+    </div>
+    <div class="info">
+      <h2>Vikram Singh</h2>
+      <div class="pid">ID: demo_p5</div>
+      <div class="row"><strong>Age:</strong> 55 &nbsp;|&nbsp; <strong>Blood:</strong> O-</div>
+      <div class="row"><strong>Phone:</strong> 9543210987</div>
+      <div class="row"><strong>Doctor:</strong> Dr. Gupta</div>
+      <div class="row"><strong>Conditions:</strong> Type 2 Diabetes, Neuropathy</div>
+      <div class="row allergy">⚠️ Allergies: Penicillin</div>
+      <div class="meds"><strong style="font-size:0.78rem;">Current Medicines:</strong><br><span class="med-tag">Glycomet 1g</span><span class="med-tag">Pregabalin 75mg</span><span class="med-tag">Becosules</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="qr-side">
+      <div class="logo">MediChain</div>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=PATIENT_demo_p6_QR" width="150" height="150" alt="QR">
+      <div class="footer">Scan to view record</div>
+    </div>
+    <div class="info">
+      <h2>Priya Nair</h2>
+      <div class="pid">ID: demo_p6</div>
+      <div class="row"><strong>Age:</strong> 38 &nbsp;|&nbsp; <strong>Blood:</strong> B-</div>
+      <div class="row"><strong>Phone:</strong> 9432109876</div>
+      <div class="row"><strong>Doctor:</strong> Dr. Iyer</div>
+      <div class="row"><strong>Conditions:</strong> GERD, Anxiety</div>
+      <div class="row allergy">⚠️ Allergies: Aspirin, Codeine</div>
+      <div class="meds"><strong style="font-size:0.78rem;">Current Medicines:</strong><br><span class="med-tag">Pan-D 40mg</span><span class="med-tag">Omez 20mg</span><span class="med-tag">Nexito 10mg</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="qr-side">
+      <div class="logo">MediChain</div>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=PATIENT_demo_p7_QR" width="150" height="150" alt="QR">
+      <div class="footer">Scan to view record</div>
+    </div>
+    <div class="info">
+      <h2>Suresh Reddy</h2>
+      <div class="pid">ID: demo_p7</div>
+      <div class="row"><strong>Age:</strong> 68 &nbsp;|&nbsp; <strong>Blood:</strong> A-</div>
+      <div class="row"><strong>Phone:</strong> 9321098765</div>
+      <div class="row"><strong>Doctor:</strong> Dr. Rao</div>
+      <div class="row"><strong>Conditions:</strong> Coronary Artery Disease, Hypertension</div>
+      <div class="row allergy">⚠️ Allergies: NSAIDs</div>
+      <div class="meds"><strong style="font-size:0.78rem;">Current Medicines:</strong><br><span class="med-tag">Ecosprin 150mg</span><span class="med-tag">Clopitop 75mg</span><span class="med-tag">Telma 80mg</span><span class="med-tag">Atorva 40mg</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="qr-side">
+      <div class="logo">MediChain</div>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=PATIENT_demo_p8_QR" width="150" height="150" alt="QR">
+      <div class="footer">Scan to view record</div>
+    </div>
+    <div class="info">
+      <h2>Kavita Desai</h2>
+      <div class="pid">ID: demo_p8</div>
+      <div class="row"><strong>Age:</strong> 50 &nbsp;|&nbsp; <strong>Blood:</strong> AB-</div>
+      <div class="row"><strong>Phone:</strong> 9210987654</div>
+      <div class="row"><strong>Doctor:</strong> Dr. Shah</div>
+      <div class="row"><strong>Conditions:</strong> Rheumatoid Arthritis, Anaemia</div>
+      <div class="row allergy">⚠️ Allergies: Latex, Sulfa</div>
+      <div class="meds"><strong style="font-size:0.78rem;">Current Medicines:</strong><br><span class="med-tag">Wysolone 10mg</span><span class="med-tag">Dexorange Syrup</span><span class="med-tag">Shelcal HD</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="qr-side">
+      <div class="logo">MediChain</div>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=PATIENT_demo_p9_QR" width="150" height="150" alt="QR">
+      <div class="footer">Scan to view record</div>
+    </div>
+    <div class="info">
+      <h2>Mohan Verma</h2>
+      <div class="pid">ID: demo_p9</div>
+      <div class="row"><strong>Age:</strong> 62 &nbsp;|&nbsp; <strong>Blood:</strong> O+</div>
+      <div class="row"><strong>Phone:</strong> 9109876543</div>
+      <div class="row"><strong>Doctor:</strong> Dr. Jain</div>
+      <div class="row"><strong>Conditions:</strong> COPD, Type 2 Diabetes</div>
+      <div class="row allergy">⚠️ Allergies: None known</div>
+      <div class="meds"><strong style="font-size:0.78rem;">Current Medicines:</strong><br><span class="med-tag">Deriphyllin</span><span class="med-tag">Glycomet SR 500mg</span><span class="med-tag">Limcee 500mg</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="qr-side">
+      <div class="logo">MediChain</div>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=PATIENT_demo_p10_QR" width="150" height="150" alt="QR">
+      <div class="footer">Scan to view record</div>
+    </div>
+    <div class="info">
+      <h2>Anita Bose</h2>
+      <div class="pid">ID: demo_p10</div>
+      <div class="row"><strong>Age:</strong> 42 &nbsp;|&nbsp; <strong>Blood:</strong> B+</div>
+      <div class="row"><strong>Phone:</strong> 9098765432</div>
+      <div class="row"><strong>Doctor:</strong> Dr. Chatterjee</div>
+      <div class="row"><strong>Conditions:</strong> Migraine, Iron Deficiency</div>
+      <div class="row allergy">⚠️ Allergies: Penicillin, Dust</div>
+      <div class="meds"><strong style="font-size:0.78rem;">Current Medicines:</strong><br><span class="med-tag">Saridon</span><span class="med-tag">Dexorange</span><span class="med-tag">Allegra 120mg</span></div>
+    </div>
+  </div>
+
+</div>
+<p style="text-align:center;margin-top:30px;color:#9ca3af;font-size:0.8rem;">
+  Generated by MediChain · For demo purposes only
+</p>
+</body>
+</html>

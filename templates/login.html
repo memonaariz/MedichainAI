@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}Login - MediChain{% endblock %}
 
@@ -196,8 +196,9 @@
 <div class="login-container">
     <div class="login-card">
         <div class="login-header">
-            <h2><i class="fas fa-shield-alt"></i> Secure Login</h2>
-            <p>Access your blockchain-secured medical records</p>
+            <h2><i class="fas fa-shield-alt"></i> MediChain</h2>
+            <p>Blockchain-Secured Blockchain Secured</p>
+            <p style="font-size:0.78rem;color:#9ca3af;margin-top:0.25rem;">Preventing prescription drug abuse · Protecting patient safety</p>
         </div>
         
         <form method="POST">
@@ -226,38 +227,6 @@
             <p>Don't have an account? <a href="{{ url_for('register') }}">Register here</a></p>
         </div>
         
-        <div class="divider">
-            <span>Demo Credentials</span>
-        </div>
-        
-        <div class="demo-credentials">
-            <h4><i class="fas fa-info-circle"></i> Test Accounts</h4>
-            
-            <div class="credential-item">
-                <span class="credential-label"><i class="fas fa-user-md"></i> Doctor</span>
-                <div>
-                    <span class="credential-value">doctor1</span> / 
-                    <span class="credential-value">doc123</span>
-                </div>
-            </div>
-            
-            <div class="credential-item">
-                <span class="credential-label"><i class="fas fa-user-injured"></i> Patient</span>
-                <div>
-                    <span class="credential-value">patient1</span> / 
-                    <span class="credential-value">pat123</span>
-                </div>
-            </div>
-            
-            <div class="credential-item">
-                <span class="credential-label"><i class="fas fa-user-shield"></i> Admin</span>
-                <div>
-                    <span class="credential-value">admin</span> / 
-                    <span class="credential-value">admin123</span>
-                </div>
-            </div>
-        </div>
-        
         <div class="security-features">
             <span class="security-badge-small">
                 <i class="fas fa-shield-virus"></i> SHA-256 Encrypted
@@ -265,10 +234,11 @@
             <span class="security-badge-small">
                 <i class="fas fa-link"></i> Blockchain Verified
             </span>
-            <span class="security-badge-small">
-                <i class="fas fa-lock"></i> HIPAA Compliant
-            </span>
+
         </div>
     </div>
 </div>
 {% endblock %}
+
+
+

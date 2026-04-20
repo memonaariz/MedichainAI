@@ -39,5 +39,243 @@
     "emergency_contact_name": "chandu",
     "emergency_contact_phone": "9897889880",
     "created_at": "2026-03-30T02:17:11.789233"
+  },
+  "aarizmemon": {
+    "id": "aarizmemon",
+    "name": "aariz memon",
+    "age": 21,
+    "phone": "8097232313",
+    "email": "vellabrother13@gmail.com",
+    "blood_group": "AB+",
+    "allergies": [
+      "Penicillin",
+      "Aspirin"
+    ],
+    "medical_history": [
+      "Hypertension"
+    ],
+    "current_conditions": [
+      "Hypertension"
+    ],
+    "qr_code": "PATIENT_aarizmemon_QR",
+    "insurance_id": "wqqeqeqee",
+    "insurance_provider": "HDFC",
+    "emergency_contact_name": "chandu",
+    "emergency_contact_phone": "9897889880",
+    "created_at": "2026-04-04T05:07:37.990403"
+  },
+  "demo_p1": {
+    "id": "demo_p1",
+    "name": "Rajesh Kumar",
+    "age": 65,
+    "blood_group": "O+",
+    "phone": "9876543210",
+    "allergies": [
+      "Penicillin",
+      "Aspirin"
+    ],
+    "medical_history": [
+      "Type 2 Diabetes",
+      "Hypertension"
+    ],
+    "current_conditions": [
+      "Type 2 Diabetes",
+      "Hypertension"
+    ],
+    "qr_code": "PATIENT_demo_p1_QR",
+    "insurance_provider": "Ayushman Bharat",
+    "insurance_id": "PMJAYDEMO_P1"
+  },
+  "demo_p2": {
+    "id": "demo_p2",
+    "name": "Sunita Patel",
+    "age": 58,
+    "blood_group": "B+",
+    "phone": "9823456710",
+    "allergies": [
+      "Sulfa drugs"
+    ],
+    "medical_history": [
+      "Hypothyroidism",
+      "Obesity"
+    ],
+    "current_conditions": [
+      "Hypothyroidism",
+      "Obesity"
+    ],
+    "qr_code": "PATIENT_demo_p2_QR",
+    "insurance_provider": "Ayushman Bharat",
+    "insurance_id": "PMJAYDEMO_P2"
+  },
+  "demo_p3": {
+    "id": "demo_p3",
+    "name": "Arun Sharma",
+    "age": 72,
+    "blood_group": "A+",
+    "phone": "9712345678",
+    "allergies": [
+      "Ibuprofen"
+    ],
+    "medical_history": [
+      "Hypertension",
+      "High Cholesterol"
+    ],
+    "current_conditions": [
+      "Hypertension",
+      "High Cholesterol"
+    ],
+    "qr_code": "PATIENT_demo_p3_QR",
+    "insurance_provider": "Ayushman Bharat",
+    "insurance_id": "PMJAYDEMO_P3"
+  },
+  "demo_p4": {
+    "id": "demo_p4",
+    "name": "Meena Joshi",
+    "age": 45,
+    "blood_group": "AB+",
+    "phone": "9654321098",
+    "allergies": [
+      "None known"
+    ],
+    "medical_history": [
+      "Asthma",
+      "Allergic Rhinitis"
+    ],
+    "current_conditions": [
+      "Asthma",
+      "Allergic Rhinitis"
+    ],
+    "qr_code": "PATIENT_demo_p4_QR",
+    "insurance_provider": "Ayushman Bharat",
+    "insurance_id": "PMJAYDEMO_P4"
+  },
+  "demo_p5": {
+    "id": "demo_p5",
+    "name": "Vikram Singh",
+    "age": 55,
+    "blood_group": "O-",
+    "phone": "9543210987",
+    "allergies": [
+      "Penicillin"
+    ],
+    "medical_history": [
+      "Type 2 Diabetes",
+      "Neuropathy"
+    ],
+    "current_conditions": [
+      "Type 2 Diabetes",
+      "Neuropathy"
+    ],
+    "qr_code": "PATIENT_demo_p5_QR",
+    "insurance_provider": "Ayushman Bharat",
+    "insurance_id": "PMJAYDEMO_P5"
+  },
+  "demo_p6": {
+    "id": "demo_p6",
+    "name": "Priya Nair",
+    "age": 38,
+    "blood_group": "B-",
+    "phone": "9432109876",
+    "allergies": [
+      "Aspirin",
+      "Codeine"
+    ],
+    "medical_history": [
+      "GERD",
+      "Anxiety"
+    ],
+    "current_conditions": [
+      "GERD",
+      "Anxiety"
+    ],
+    "qr_code": "PATIENT_demo_p6_QR",
+    "insurance_provider": "Ayushman Bharat",
+    "insurance_id": "PMJAYDEMO_P6"
+  },
+  "demo_p7": {
+    "id": "demo_p7",
+    "name": "Suresh Reddy",
+    "age": 68,
+    "blood_group": "A-",
+    "phone": "9321098765",
+    "allergies": [
+      "NSAIDs"
+    ],
+    "medical_history": [
+      "Coronary Artery Disease",
+      "Hypertension"
+    ],
+    "current_conditions": [
+      "Coronary Artery Disease",
+      "Hypertension"
+    ],
+    "qr_code": "PATIENT_demo_p7_QR",
+    "insurance_provider": "Ayushman Bharat",
+    "insurance_id": "PMJAYDEMO_P7"
+  },
+  "demo_p8": {
+    "id": "demo_p8",
+    "name": "Kavita Desai",
+    "age": 50,
+    "blood_group": "AB-",
+    "phone": "9210987654",
+    "allergies": [
+      "Latex",
+      "Sulfa"
+    ],
+    "medical_history": [
+      "Rheumatoid Arthritis",
+      "Anaemia"
+    ],
+    "current_conditions": [
+      "Rheumatoid Arthritis",
+      "Anaemia"
+    ],
+    "qr_code": "PATIENT_demo_p8_QR",
+    "insurance_provider": "Ayushman Bharat",
+    "insurance_id": "PMJAYDEMO_P8"
+  },
+  "demo_p9": {
+    "id": "demo_p9",
+    "name": "Mohan Verma",
+    "age": 62,
+    "blood_group": "O+",
+    "phone": "9109876543",
+    "allergies": [
+      "None known"
+    ],
+    "medical_history": [
+      "COPD",
+      "Type 2 Diabetes"
+    ],
+    "current_conditions": [
+      "COPD",
+      "Type 2 Diabetes"
+    ],
+    "qr_code": "PATIENT_demo_p9_QR",
+    "insurance_provider": "Ayushman Bharat",
+    "insurance_id": "PMJAYDEMO_P9"
+  },
+  "demo_p10": {
+    "id": "demo_p10",
+    "name": "Anita Bose",
+    "age": 42,
+    "blood_group": "B+",
+    "phone": "9098765432",
+    "allergies": [
+      "Penicillin",
+      "Dust"
+    ],
+    "medical_history": [
+      "Migraine",
+      "Iron Deficiency"
+    ],
+    "current_conditions": [
+      "Migraine",
+      "Iron Deficiency"
+    ],
+    "qr_code": "PATIENT_demo_p10_QR",
+    "insurance_provider": "Ayushman Bharat",
+    "insurance_id": "PMJAYDEMO_P10"
   }
 }

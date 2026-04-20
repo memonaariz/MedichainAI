@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}Medication Reminders{% endblock %}
 
@@ -7,59 +7,106 @@
     .reminder-card {
         background: white;
         padding: 1.5rem;
-        border-radius: 8px;
+        border-radius: 12px;
         margin-bottom: 1rem;
         border-left: 4px solid #ffc107;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: border-color 0.3s, opacity 0.3s;
     }
-    
+    .reminder-card.all-taken {
+        border-left-color: #28a745;
+        opacity: 0.85;
+    }
+    .reminder-card.partial-taken {
+        border-left-color: #17a2b8;
+    }
     .reminder-header {
         display: flex;
         justify-content: space-between;
-        align-items: center;
+        align-items: flex-start;
         margin-bottom: 0.5rem;
     }
-    
-    .reminder-time {
-        background: #ffc107;
-        color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        font-weight: bold;
-    }
-    
-    .reminder-details {
-        margin-top: 1rem;
-        padding-top: 1rem;
-        border-top: 1px solid #eee;
-    }
-    
     .status-badge {
         display: inline-block;
         padding: 0.25rem 0.75rem;
         border-radius: 20px;
-        font-size: 0.85rem;
+        font-size: 0.82rem;
         font-weight: bold;
+        white-space: nowrap;
     }
-    
-    .status-active {
-        background: #d4edda;
-        color: #155724;
+    .badge-active   { background: #d4edda; color: #155724; }
+    .badge-taken    { background: #cce5ff; color: #004085; }
+    .badge-partial  { background: #d1ecf1; color: #0c5460; }
+    .badge-pending  { background: #fff3cd; color: #856404; }
+
+    .dose-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.45rem 1rem;
+        border-radius: 20px;
+        border: none;
+        font-size: 0.88rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s, transform 0.1s;
+        margin: 0.2rem 0.2rem 0.2rem 0;
     }
-    
-    .status-completed {
-        background: #cfe2ff;
-        color: #084298;
+    .dose-btn:active { transform: scale(0.96); }
+    .dose-btn.pending  { background: #28a745; color: white; }
+    .dose-btn.done     { background: #6c757d; color: white; cursor: default; }
+    .dose-btn.done::before { content: "✓ "; }
+
+    .mark-all-btn {
+        background: #28a745;
+        color: white;
+        padding: 0.5rem 1.2rem;
+        border-radius: 20px;
+        border: none;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: background 0.2s;
     }
-    
+    .mark-all-btn:hover { background: #218838; }
+    .mark-all-btn.all-done { background: #6c757d; cursor: default; }
+
+    .buy-btn {
+        background: #e67e22;
+        color: white;
+        padding: 0.5rem 1.2rem;
+        border-radius: 20px;
+        border: none;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+    .buy-btn:hover { background: #ca6f1e; }
+
+    .taken-summary {
+        font-size: 0.8rem;
+        color: #555;
+        margin-top: 0.4rem;
+    }
+    .taken-summary span { color: #28a745; font-weight: 600; }
+
     .empty-state {
         text-align: center;
         padding: 3rem 1rem;
         color: #666;
     }
-    
-    .empty-state h3 {
-        margin-bottom: 1rem;
+    .progress-bar-wrap {
+        background: #e9ecef;
+        border-radius: 10px;
+        height: 6px;
+        margin-top: 0.5rem;
+        overflow: hidden;
+    }
+    .progress-bar-fill {
+        height: 100%;
+        border-radius: 10px;
+        background: #28a745;
+        transition: width 0.4s;
     }
 </style>
 {% endblock %}
@@ -67,39 +114,88 @@
 {% block content %}
 <div class="card">
     <h2>⏰ Medication Reminders</h2>
-    <p style="margin-top: 0.5rem; color: #666;">Your active medication reminders</p>
+    <p style="margin-top:0.5rem;color:#666;">Track your doses for today — {{ today }}</p>
 </div>
 
 {% if reminders %}
     {% for reminder in reminders %}
-    <div class="reminder-card">
+    {% set times = reminder.times if reminder.times else [] %}
+    {% set taken = reminder.today_doses_taken if reminder.today_doses_taken else [] %}
+    {% set status = reminder.today_status %}
+    {% set source_label = '👨‍⚕️ Doctor Prescribed' if not reminder.source else ('✏️ Personal Reminder' if reminder.source == 'manual' else '📸 Snapped') %}
+    {% set source_color = '#2980b9' if not reminder.source else '#7c3aed' %}
+
+    <div class="reminder-card {% if status == 'taken' %}all-taken{% elif status == 'partial' %}partial-taken{% endif %}"
+         id="card-{{ reminder.id }}">
+
         <div class="reminder-header">
             <div>
                 <h3>💊 {{ reminder.medication }}</h3>
-                <p style="color: #666; margin-top: 0.25rem;">{{ reminder.dosage }}</p>
+                <p style="color:#666;margin-top:0.2rem;">{{ reminder.dosage }}</p>
+                <span style="font-size:0.75rem;font-weight:600;padding:0.2rem 0.6rem;border-radius:20px;
+                    {% if not reminder.source %}background:#e8f4fb;color:#2980b9;
+                    {% else %}background:#ede9fe;color:#7c3aed;{% endif %}">
+                    {{ source_label }}
+                </span>
             </div>
-            <span class="status-badge status-active">{{ reminder.status|upper }}</span>
+            <span class="status-badge
+                {% if status == 'taken' %}badge-taken
+                {% elif status == 'partial' %}badge-partial
+                {% elif reminder.status == 'active' %}badge-active
+                {% else %}badge-pending{% endif %}"
+                id="badge-{{ reminder.id }}">
+                {% if status == 'taken' %}✅ ALL TAKEN
+                {% elif status == 'partial' %}⚡ PARTIAL
+                {% else %}{{ reminder.status|upper }}{% endif %}
+            </span>
         </div>
-        
-        <div class="reminder-details">
-            <p><strong>Frequency:</strong> {{ reminder.frequency }}</p>
-            
-            {% if reminder.times %}
-            <p><strong>⏰ Times:</strong>
-                {% for time in reminder.times %}
-                    <span class="reminder-time">{{ time }}</span>
-                {% endfor %}
-            </p>
+
+        <p><strong>Frequency:</strong> {{ reminder.frequency }}</p>
+
+        {% if times %}
+        <p style="margin-top:0.5rem;"><strong>⏰ Doses:</strong></p>
+        <div id="doses-{{ reminder.id }}" style="margin-top:0.4rem;">
+            {% for t in times %}
+            <button
+                class="dose-btn {% if t in taken %}done{% else %}pending{% endif %}"
+                id="dose-{{ reminder.id }}-{{ t|replace(':','') }}"
+                onclick="markDose('{{ reminder.id }}', '{{ t }}')"
+                {% if t in taken %}disabled{% endif %}>
+                {% if t in taken %}{{ t }}{% else %}Mark {{ t }}{% endif %}
+            </button>
+            {% endfor %}
+        </div>
+
+        {% set taken_count = taken|length %}
+        {% set total_count = times|length %}
+        <div class="taken-summary">
+            <span>{{ taken_count }}</span> / {{ total_count }} doses taken today
+        </div>
+        <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" id="prog-{{ reminder.id }}"
+                 style="width: {{ ((taken_count / total_count) * 100)|int if total_count > 0 else 0 }}%"></div>
+        </div>
+
+        {% else %}
+        <!-- No specific times — single mark as taken -->
+        <div style="margin-top:0.75rem;">
+            <button
+                class="dose-btn {% if status == 'taken' %}done{% else %}pending{% endif %}"
+                id="dose-{{ reminder.id }}-single"
+                onclick="markDose('{{ reminder.id }}', '')"
+                {% if status == 'taken' %}disabled{% endif %}>
+                {% if status == 'taken' %}Taken Today{% else %}✓ Mark as Taken{% endif %}
+            </button>
+        </div>
+        {% endif %}
+
+        <div style="margin-top:0.9rem;">
+            <button class="buy-btn" onclick="buyMedicine('{{ reminder.medication }}')">
+                🛒 Compare & Buy
+            </button>
+            {% if reminder.taken_count %}
+            <small style="color:#888;margin-left:0.75rem;">Total taken: {{ reminder.taken_count }} dose(s)</small>
             {% endif %}
-            
-            <div style="margin-top: 1rem;">
-                <button class="btn" style="background: #28a745;" onclick="markTaken('{{ reminder.id }}')">
-                    ✓ Mark as Taken
-                </button>
-                <button class="btn btn-secondary" onclick="buyMedicine('{{ reminder.medication }}')">
-                    🛒 Buy Now
-                </button>
-            </div>
         </div>
     </div>
     {% endfor %}
@@ -107,29 +203,165 @@
     <div class="empty-state">
         <h3>📭 No Active Reminders</h3>
         <p>Snap a prescription to create medication reminders</p>
-        <a href="{{ url_for('patient_snap_prescription') }}" class="btn" style="margin-top: 1rem;">
+        <a href="{{ url_for('patient_snap_prescription') }}" class="btn" style="margin-top:1rem;">
             📸 Snap Prescription
         </a>
     </div>
 {% endif %}
 
-<div style="margin-top: 2rem;">
+<div style="margin-top:2rem;">
     <a href="{{ url_for('patient_dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
 </div>
 
+<!-- Compare & Buy Modal -->
+<div id="buy-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:white;border-radius:16px;padding:2rem;max-width:540px;width:90%;max-height:90vh;overflow-y:auto;position:relative;">
+        <button onclick="closeModal()" style="position:absolute;top:1rem;right:1rem;background:#e74c3c;color:white;border:none;border-radius:50%;width:32px;height:32px;font-size:1.1rem;cursor:pointer;">✕</button>
+        <h3 id="modal-title" style="margin-bottom:1rem;">🛒 Compare & Buy</h3>
+        <div id="pharmacy-links"></div>
+        <p style="margin-top:1rem;font-size:0.75rem;color:#999;text-align:center;">
+            ⚠️ Always buy medicines with a valid prescription.
+        </p>
+    </div>
+</div>
+
 <script>
-    function markTaken(reminderId) {
-        alert('✅ Marked as taken! Great job staying on track.');
-    }
-    
-    function buyMedicine(medicineName) {
-        fetch(`/api/patient/buy-medicine/${medicineName}`)
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    window.open(data.link, '_blank');
+function markDose(reminderId, doseTime) {
+    const btnId = doseTime
+        ? `dose-${reminderId}-${doseTime.replace(':', '')}`
+        : `dose-${reminderId}-single`;
+    const btn = document.getElementById(btnId);
+    if (!btn || btn.disabled) return;
+
+    btn.disabled = true;
+    btn.textContent = '...';
+
+    fetch('/api/patient/mark-taken', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reminder_id: reminderId, dose_time: doseTime })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (!data.success) {
+            btn.disabled = false;
+            btn.textContent = doseTime ? `Mark ${doseTime}` : '✓ Mark as Taken';
+            alert('Error: ' + data.error);
+            return;
+        }
+
+        // Update this button to "done"
+        btn.className = 'dose-btn done';
+        btn.textContent = doseTime || 'Taken Today';
+
+        const status = data.today_status;
+        const badge = document.getElementById(`badge-${reminderId}`);
+        const card  = document.getElementById(`card-${reminderId}`);
+
+        if (status === 'taken') {
+            badge.className = 'status-badge badge-taken';
+            badge.textContent = '✅ ALL TAKEN';
+            card.classList.remove('partial-taken');
+            card.classList.add('all-taken');
+        } else if (status === 'partial') {
+            badge.className = 'status-badge badge-partial';
+            badge.textContent = '⚡ PARTIAL';
+            card.classList.add('partial-taken');
+        }
+
+        // Update progress bar
+        const prog = document.getElementById(`prog-${reminderId}`);
+        if (prog) {
+            const allBtns = document.querySelectorAll(`[id^="dose-${reminderId}-"]`);
+            const doneBtns = [...allBtns].filter(b => b.classList.contains('done'));
+            const pct = allBtns.length ? Math.round((doneBtns.length / allBtns.length) * 100) : 100;
+            prog.style.width = pct + '%';
+
+            // Update summary text
+            const summary = prog.closest('.reminder-card').querySelector('.taken-summary span');
+            if (summary) summary.textContent = doneBtns.length;
+        }
+    })
+    .catch(() => {
+        btn.disabled = false;
+        btn.textContent = doseTime ? `Mark ${doseTime}` : '✓ Mark as Taken';
+        alert('Network error. Please try again.');
+    });
+}
+
+function buyMedicine(medicineName) {
+    document.getElementById('modal-title').textContent = '🛒 Buy: ' + medicineName;
+    document.getElementById('pharmacy-links').innerHTML = '<p style="color:#888;text-align:center;padding:1rem;">Loading...</p>';
+    document.getElementById('buy-modal').style.display = 'flex';
+
+    fetch(`/api/patient/buy-medicine/${encodeURIComponent(medicineName)}`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) {
+                document.getElementById('pharmacy-links').innerHTML = '<p style="color:red;">Error loading. Try again.</p>';
+                return;
+            }
+
+            let html = '';
+
+            // Prescription requirement banner
+            if (data.needs_prescription) {
+                if (data.matching_prescriptions && data.matching_prescriptions.length > 0) {
+                    const rx = data.matching_prescriptions[0];
+                    html += `<div style="background:#d1fae5;border:1px solid #6ee7b7;border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.83rem;color:#065f46;">
+                        ✅ <strong>Doctor prescription found!</strong> Issued by ${rx.doctor} on ${rx.date}.<br>
+                        <span style="font-size:0.75rem;color:#047857;">Show your MediChain QR to the pharmacy or upload prescription on the site.</span>
+                    </div>`;
+                } else {
+                    html += `<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.83rem;color:#92400e;">
+                        ⚠️ <strong>Prescription required</strong> for this medicine.<br>
+                        <span style="font-size:0.75rem;">Ask your doctor to write a prescription in MediChain, then show the QR at pharmacy.</span>
+                    </div>`;
                 }
+            } else {
+                html += `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:0.65rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:#1e40af;">
+                    💊 This medicine is available OTC — no prescription needed at most pharmacies.
+                </div>`;
+            }
+
+            data.platforms.forEach(p => {
+                html += `
+                    <a href="${p.url}" target="_blank" rel="noopener noreferrer"
+                       style="display:flex;align-items:center;justify-content:space-between;
+                              background:#f8f9fa;border:1.5px solid #e0e0e0;border-radius:10px;
+                              padding:0.85rem 1rem;margin-bottom:0.6rem;text-decoration:none;color:#222;
+                              transition:box-shadow 0.2s;"
+                       onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.12)'"
+                       onmouseout="this.style.boxShadow='none'">
+                        <div style="display:flex;align-items:center;gap:0.75rem;">
+                            <span style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:10px;background:${p.logo_bg || '#667eea'};color:white;font-weight:800;font-size:0.75rem;flex-shrink:0;">${p.logo}</span>
+                            <div>
+                                <div style="font-weight:700;font-size:0.95rem;">${p.name}</div>
+                                <div style="font-size:0.78rem;color:#666;">${p.description}</div>
+                            </div>
+                        </div>
+                        <span style="background:#bbdefb;color:#0d47a1;padding:0.2rem 0.55rem;border-radius:20px;font-size:0.72rem;font-weight:600;white-space:nowrap;">
+                            ${p.badge}
+                        </span>
+                    </a>`;
             });
-    }
+
+            document.getElementById('pharmacy-links').innerHTML = html;
+        })
+        .catch(() => {
+            document.getElementById('pharmacy-links').innerHTML = '<p style="color:red;">Network error. Please try again.</p>';
+        });
+}
+
+function closeModal() {
+    document.getElementById('buy-modal').style.display = 'none';
+}
+document.getElementById('buy-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
 </script>
 {% endblock %}
+
+
+
+

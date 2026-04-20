@@ -1,19 +1,41 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}Drug Side Effects - MediChain{% endblock %}
 
 {% block extra_css %}
 <style>
-    .search-box {
-        margin-bottom: 2rem;
+    .search-row {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        align-items: stretch;
+        margin-bottom: 1rem;
     }
     
-    .search-box input {
-        width: 100%;
-        padding: 0.8rem;
+    .search-row input[type="text"] {
+        flex: 1;
+        min-width: 200px;
+        padding: 0.85rem 1rem;
         font-size: 1rem;
         border: 2px solid #ddd;
-        border-radius: 4px;
+        border-radius: 10px;
+    }
+    
+    .search-row input[type="text"]:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+    }
+    
+    .search-row .btn-search {
+        padding: 0.85rem 1.75rem;
+        white-space: nowrap;
+    }
+    
+    #searchStatus {
+        font-size: 0.9rem;
+        min-height: 1.5rem;
+        margin-top: 0.5rem;
     }
     
     .drug-info {
@@ -52,66 +74,214 @@
 </div>
 
 <div class="card">
-    <div class="search-box">
-        <input type="text" id="drugSearch" placeholder="Search drug name (e.g., Amlong, Metformin, Aspirin)..." onkeyup="searchDrug()">
+    <div class="search-row" style="position:relative;">
+        <input type="text" id="drugSearch" placeholder="Enter medicine name (e.g. Rantac, Crocin, Combiflam)..." autocomplete="off" aria-label="Medicine search" oninput="showSuggestions(this.value)" onkeydown="handleKey(event)">
+        <button type="button" class="btn btn-search" id="btnSearchDrug"><i class="fas fa-search"></i> Search</button>
+
+        <!-- Autocomplete dropdown -->
+        <div id="suggestions" style="display:none; position:absolute; top:100%; left:0; right:60px; background:white; border:1.5px solid #ddd; border-top:none; border-radius:0 0 10px 10px; box-shadow:0 4px 12px rgba(0,0,0,0.1); z-index:100; max-height:220px; overflow-y:auto;"></div>
     </div>
+    <p id="searchStatus" style="color: #6b7280;"></p>
     
     <div id="drugInfo" class="drug-info">
         <h3 id="drugName"></h3>
         <p id="drugType" style="color: #666; margin-top: 0.5rem;"></p>
+        <p id="drugSeverity" style="margin-top: 0.5rem; font-weight: 600;"></p>
+        
+        <div id="drugWarningsWrap" style="margin-top: 1rem; display: none;">
+            <h4>Warnings:</h4>
+            <p id="drugWarnings" style="color: #92400e; background: #fffbeb; padding: 0.75rem 1rem; border-radius: 8px; border-left: 4px solid #f59e0b;"></p>
+        </div>
+        
+        <div id="drugInteractionsWrap" style="margin-top: 1rem; display: none;">
+            <h4>Common interactions:</h4>
+            <div id="drugInteractions" class="side-effects-list"></div>
+        </div>
         
         <div style="margin-top: 1.5rem;">
-            <h4>Common Side Effects:</h4>
+            <h4>Common side effects:</h4>
             <div id="commonSideEffects" class="side-effects-list"></div>
         </div>
         
         <div style="margin-top: 1.5rem;">
-            <h4>Serious Side Effects:</h4>
+            <h4>Serious side effects:</h4>
             <div id="seriousSideEffects" class="side-effects-list"></div>
         </div>
     </div>
     
     <div id="noResults" style="text-align: center; padding: 2rem; color: #999;">
-        <p>Search for a drug to see side effects</p>
+        <p>Press Search or hit Enter — side effects will appear here.</p>
     </div>
 </div>
-{% endblock %}
 
 <script>
-function searchDrug() {
-    const searchTerm = document.getElementById('drugSearch').value.trim();
-    
-    if (!searchTerm) {
-        document.getElementById('drugInfo').classList.remove('show');
-        document.getElementById('noResults').style.display = 'block';
-        return;
+(function() {
+    function escapeHtml(s) {
+        if (!s) return '';
+        const d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
     }
-    
-    fetch('/api/patient/get-drug-info', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({drug_name: searchTerm})
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            const drug = data.drug;
-            document.getElementById('drugName').textContent = drug.name;
-            document.getElementById('drugType').textContent = drug.type;
-            
-            document.getElementById('commonSideEffects').innerHTML = 
-                drug.common_side_effects.map(e => `<div class="side-effect-item">✓ ${e}</div>`).join('');
-            
-            document.getElementById('seriousSideEffects').innerHTML = 
-                drug.serious_side_effects.map(e => `<div class="side-effect-item" style="border-left-color: #d9534f;">⚠️ ${e}</div>`).join('');
-            
-            document.getElementById('drugInfo').classList.add('show');
-            document.getElementById('noResults').style.display = 'none';
-        } else {
-            document.getElementById('drugInfo').classList.remove('show');
-            document.getElementById('noResults').innerHTML = '<p style="color: #d9534f;">❌ Drug not found</p>';
-            document.getElementById('noResults').style.display = 'block';
+
+    function searchDrug() {
+        const searchTerm = document.getElementById('drugSearch').value.trim();
+        const statusEl = document.getElementById('searchStatus');
+        const noResults = document.getElementById('noResults');
+        const drugInfo = document.getElementById('drugInfo');
+
+        if (!searchTerm) {
+            drugInfo.classList.remove('show');
+            noResults.style.display = 'block';
+            noResults.innerHTML = '<p>Please enter a medicine name and click Search.</p>';
+            statusEl.textContent = '';
+            return;
+        }
+
+        statusEl.innerHTML = '<span class="loading" style="border-top-color: var(--primary); vertical-align: middle;"></span> Searching...';
+        drugInfo.classList.remove('show');
+
+        fetch('/api/patient/get-drug-info', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ drug_name: searchTerm })
+        })
+        .then(function(r) {
+            if (!r.ok) throw new Error('Server error: ' + r.status);
+            return r.json();
+        })
+        .then(function(data) {
+            statusEl.textContent = '';
+            if (data.success && data.drug) {
+                const drug = data.drug;
+                document.getElementById('drugName').textContent = drug.name;
+                document.getElementById('drugType').textContent = drug.type || '';
+                var sev = drug.severity ? ('Risk level: ' + drug.severity) : '';
+                document.getElementById('drugSeverity').textContent = sev;
+
+                var warnWrap = document.getElementById('drugWarningsWrap');
+                if (drug.warnings) {
+                    warnWrap.style.display = 'block';
+                    document.getElementById('drugWarnings').innerHTML = escapeHtml(drug.warnings);
+                } else {
+                    warnWrap.style.display = 'none';
+                }
+
+                var intWrap = document.getElementById('drugInteractionsWrap');
+                if (drug.interactions && drug.interactions.length) {
+                    intWrap.style.display = 'block';
+                    document.getElementById('drugInteractions').innerHTML = drug.interactions.map(function(x) {
+                        return '<div class="side-effect-item">' + escapeHtml(x) + '</div>';
+                    }).join('');
+                } else {
+                    intWrap.style.display = 'none';
+                }
+
+                document.getElementById('commonSideEffects').innerHTML =
+                    (drug.common_side_effects || []).map(function(e) {
+                        return '<div class="side-effect-item">✓ ' + escapeHtml(e) + '</div>';
+                    }).join('');
+
+                document.getElementById('seriousSideEffects').innerHTML =
+                    (drug.serious_side_effects || []).map(function(e) {
+                        return '<div class="side-effect-item" style="border-left-color: #d9534f;">⚠️ ' + escapeHtml(e) + '</div>';
+                    }).join('');
+
+                drugInfo.classList.add('show');
+                noResults.style.display = 'none';
+            } else {
+                drugInfo.classList.remove('show');
+                noResults.style.display = 'block';
+                noResults.innerHTML = '<p style="color: #d9534f;">❌ No results found for this medicine name. Please check the spelling or try a different brand name.</p>';
+            }
+        })
+        .catch(function(err) {
+            statusEl.textContent = '';
+            drugInfo.classList.remove('show');
+            noResults.style.display = 'block';
+            noResults.innerHTML = '<p style="color: #d9534f;">❌ Error: ' + escapeHtml(err.message) + '</p>';
+        });
+    }
+
+    document.getElementById('btnSearchDrug').addEventListener('click', searchDrug);
+    document.getElementById('drugSearch').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            searchDrug();
         }
     });
+})();
+
+// Autocomplete
+let acIndex = -1;
+
+function showSuggestions(val) {
+    const box = document.getElementById('suggestions');
+    if (val.length < 2) { box.style.display = 'none'; acIndex = -1; return; }
+
+    fetch('/api/patient/drug-autocomplete?q=' + encodeURIComponent(val), { credentials: 'same-origin' })
+    .then(r => r.json())
+    .then(data => {
+        const items = data.suggestions || [];
+        if (!items.length) { box.style.display = 'none'; return; }
+
+        box.innerHTML = items.map((s, i) =>
+            `<div class="ac-item" data-idx="${i}"
+                  style="padding:0.65rem 1rem; cursor:pointer; font-size:0.92rem; border-bottom:1px solid #f1f5f9;"
+                  onmousedown="selectSuggestion('${s.replace(/'/g, "\\'")}')"
+                  onmouseover="highlightItem(${i})">${s}</div>`
+        ).join('');
+        box.style.display = 'block';
+        acIndex = -1;
+    });
 }
+
+function highlightItem(idx) {
+    document.querySelectorAll('.ac-item').forEach((el, i) => {
+        el.style.background = i === idx ? '#ede9fe' : 'white';
+    });
+    acIndex = idx;
+}
+
+function selectSuggestion(name) {
+    document.getElementById('drugSearch').value = name;
+    document.getElementById('suggestions').style.display = 'none';
+    // Auto-search
+    document.getElementById('btnSearchDrug').click();
+}
+
+function handleKey(e) {
+    const box = document.getElementById('suggestions');
+    const items = box.querySelectorAll('.ac-item');
+    if (!items.length || box.style.display === 'none') return;
+
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        acIndex = Math.min(acIndex + 1, items.length - 1);
+        items.forEach((el, i) => el.style.background = i === acIndex ? '#ede9fe' : 'white');
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        acIndex = Math.max(acIndex - 1, 0);
+        items.forEach((el, i) => el.style.background = i === acIndex ? '#ede9fe' : 'white');
+    } else if (e.key === 'Enter' && acIndex >= 0) {
+        e.preventDefault();
+        selectSuggestion(items[acIndex].textContent);
+    } else if (e.key === 'Escape') {
+        box.style.display = 'none';
+    }
+}
+
+// Close suggestions on outside click
+document.addEventListener('click', e => {
+    if (!e.target.closest('.search-row')) {
+        document.getElementById('suggestions').style.display = 'none';
+    }
+});
 </script>
+{% endblock %}
+
+
+

@@ -1,0 +1,143 @@
+content = '''{% extends "base.html" %}
+{% block title %}Patient Messages - MediChain{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header{background:linear-gradient(135deg,#059669,#10b981);color:white;padding:1.8rem;border-radius:14px;margin-bottom:1.5rem;}
+.page-header h2{font-size:1.7rem;margin-bottom:0.3rem;}
+.chat-wrap{display:grid;grid-template-columns:260px 1fr;gap:1rem;height:560px;}
+.plist{background:white;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.09);overflow:hidden;display:flex;flex-direction:column;}
+.plist-hdr{padding:.9rem 1rem;background:#f8fafc;border-bottom:1px solid #e5e7eb;font-weight:700;font-size:.88rem;color:#374151;}
+.plist-body{overflow-y:auto;flex:1;}
+.pitem{padding:.85rem 1rem;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;align-items:center;gap:.7rem;}
+.pitem:hover{background:#f0fdf4;}
+.pitem.active{background:#dcfce7;border-left:3px solid #10b981;}
+.pavatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#059669,#10b981);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:.95rem;flex-shrink:0;}
+.pname{font-weight:600;font-size:.88rem;color:#1a1a2e;}
+.psub{font-size:.72rem;color:#888;margin-top:.1rem;}
+.chat-box{background:white;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.09);display:flex;flex-direction:column;overflow:hidden;}
+.chat-hdr{padding:.9rem 1.1rem;background:#f8fafc;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:.7rem;}
+.chat-hdr-name{font-weight:700;font-size:.95rem;color:#1a1a2e;}
+.chat-msgs{flex:1;overflow-y:auto;padding:1rem;background:#f8fafc;min-height:200px;}
+.mrow{display:flex;margin-bottom:.8rem;}
+.mrow.sent{justify-content:flex-end;}
+.mrow.recv{justify-content:flex-start;}
+.bubble{max-width:70%;padding:.6rem .9rem;border-radius:12px;font-size:.88rem;line-height:1.5;}
+.bubble.sent{background:#10b981;color:white;border-bottom-right-radius:3px;}
+.bubble.recv{background:white;color:#1a1a2e;border-bottom-left-radius:3px;box-shadow:0 1px 3px rgba(0,0,0,0.1);}
+.mtime{font-size:.65rem;opacity:.6;margin-top:.25rem;}
+.msender{font-size:.7rem;font-weight:700;color:#059669;margin-bottom:.15rem;}
+.chat-inp{padding:.9rem;border-top:1px solid #e5e7eb;display:flex;gap:.5rem;}
+.chat-inp input{flex:1;padding:.65rem .9rem;border:1.5px solid #ddd;border-radius:9px;font-size:.9rem;}
+.chat-inp input:focus{outline:none;border-color:#10b981;}
+.send-btn{padding:.65rem 1.1rem;background:#10b981;color:white;border:none;border-radius:9px;font-weight:700;cursor:pointer;}
+.empty-c{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#aaa;text-align:center;padding:2rem;}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>&#x1F4AC; Patient Messages</h2>
+    <p style="opacity:.9;font-size:.92rem;">View and reply to patient queries</p>
+</div>
+
+{% if messages %}
+<div class="chat-wrap">
+    <div class="plist">
+        <div class="plist-hdr">Patients</div>
+        <div class="plist-body" id="patientList">
+            {% set seen_pids = [] %}
+            {% for m in messages %}
+                {% if m.patient_id not in seen_pids %}
+                    {% set _ = seen_pids.append(m.patient_id) %}
+                    <div class="pitem" id="pi-{{ m.patient_id }}"
+                         onclick="selectPat(\'{{ m.patient_id }}\',\'{{ (m.patient_name or m.patient_id)|replace("\'","") }}\',this)">
+                        <div class="pavatar">{{ (m.patient_name or m.patient_id)[0]|upper }}</div>
+                        <div>
+                            <div class="pname">{{ m.patient_name or m.patient_id }}</div>
+                            <div class="psub">{{ m.message[:28] }}...</div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    <div class="chat-box">
+        <div class="chat-hdr">
+            <div class="pavatar" id="ca" style="width:34px;height:34px;font-size:.85rem;">?</div>
+            <div class="chat-hdr-name" id="cn">Select a patient</div>
+        </div>
+        <div class="chat-msgs" id="chatMsgs">
+            <div class="empty-c"><p>Select a patient to view messages</p></div>
+        </div>
+        <div class="chat-inp">
+            <input type="text" id="ri" placeholder="Type your reply..." onkeypress="if(event.key===\'Enter\')sendReply()">
+            <button class="send-btn" onclick="sendReply()">Send</button>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card" style="text-align:center;padding:3rem;color:#888;">
+    <p style="font-size:2.5rem;">&#x1F4AC;</p>
+    <h3>No Messages Yet</h3>
+    <p>When patients send you messages, they will appear here.</p>
+</div>
+{% endif %}
+
+<div style="margin-top:1.5rem;">
+    <a href="{{ url_for(\'doctor_dashboard\') }}" class="btn btn-secondary">Back to Dashboard</a>
+</div>
+
+<script>
+var ALL = {{ messages | tojson }};
+var curPat = null;
+function esc(t){var d=document.createElement(\'div\');d.appendChild(document.createTextNode(t));return d.innerHTML;}
+function selectPat(pid,pname,el){
+    curPat=pid;
+    document.querySelectorAll(\'.pitem\').forEach(function(i){i.classList.remove(\'active\');});
+    el.classList.add(\'active\');
+    document.getElementById(\'cn\').textContent=pname;
+    document.getElementById(\'ca\').textContent=pname[0].toUpperCase();
+    renderMsgs(pid);
+}
+function renderMsgs(pid){
+    var msgs=ALL.filter(function(m){return m.patient_id===pid;});
+    var c=document.getElementById(\'chatMsgs\');
+    if(!msgs.length){c.innerHTML=\'<div class="empty-c"><p>No messages yet.</p></div>\';return;}
+    c.innerHTML=msgs.map(function(m){
+        var sent=m.sender===\'doctor\';
+        var t=m.sent_at?m.sent_at.substring(0,16).replace(\'T\',\' \'):\'\';
+        return \'<div class="mrow \'+(sent?\'sent\':\'recv\')+\'"><div>\'
+            +(!sent?\'<div class="msender">\'+esc(m.patient_name||m.patient_id)+\'</div>\':\'\')
+            +\'<div class="bubble \'+(sent?\'sent\':\'recv\')+\'">\'+esc(m.message)+\'</div>\'
+            +\'<div class="mtime">\'+t+\'</div>\'
+            +\'</div></div>\';
+    }).join(\'\');
+    c.scrollTop=c.scrollHeight;
+}
+function sendReply(){
+    var inp=document.getElementById(\'ri\');
+    var txt=inp.value.trim();
+    if(!txt)return;
+    if(!curPat){alert(\'Select a patient first.\');return;}
+    fetch(\'/api/doctor/send-message\',{
+        method:\'POST\',
+        headers:{\'Content-Type\':\'application/json\'},
+        credentials:\'same-origin\',
+        body:JSON.stringify({patient_id:curPat,message:txt})
+    }).then(function(r){return r.json();}).then(function(d){
+        if(d.success){inp.value=\'\';ALL.push(d.message);renderMsgs(curPat);}
+        else{alert(\'Error: \'+d.error);}
+    });
+}
+var first=document.querySelector(\'.pitem\');
+if(first)first.click();
+</script>
+{% endblock %}
+'''
+
+import os
+path = os.path.join(os.path.dirname(__file__), 'templates', 'doctor', 'messages.html')
+with open(path, 'w', encoding='utf-8') as f:
+    f.write(content)
+print('Written:', os.path.getsize(path), 'bytes')

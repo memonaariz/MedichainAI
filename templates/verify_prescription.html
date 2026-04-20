@@ -1,0 +1,223 @@
+﻿{% extends "base.html" %}
+{% block title %}Verify Prescription — MediChain{% endblock %}
+
+{% block extra_css %}
+<style>
+    .verify-hero {
+        background: linear-gradient(135deg, #1a1a2e, #16213e);
+        color: white; border-radius: 16px;
+        padding: 2rem; margin-bottom: 1.5rem; text-align: center;
+    }
+    .verify-hero h2 { font-size: 1.6rem; margin-bottom: 0.4rem; }
+    .verify-hero p  { opacity: 0.8; font-size: 0.95rem; }
+
+    .valid-card   { border-left: 5px solid #10b981; background: #ecfdf5; }
+    .invalid-card { border-left: 5px solid #ef4444; background: #fef2f2; }
+
+    .hash-box {
+        background: #1a1a2e; color: #a5f3fc;
+        font-family: monospace; font-size: 0.78rem;
+        padding: 0.75rem 1rem; border-radius: 8px;
+        word-break: break-all; margin-top: 0.75rem;
+    }
+    .med-row {
+        display: flex; justify-content: space-between;
+        padding: 0.6rem 0; border-bottom: 1px solid #e5e7eb;
+        font-size: 0.9rem; flex-wrap: wrap; gap: 0.3rem;
+    }
+    .med-row:last-child { border-bottom: none; }
+    .badge-valid   { background: #d1fae5; color: #065f46; padding: 0.3rem 0.9rem; border-radius: 20px; font-weight: 700; font-size: 0.85rem; }
+    .badge-invalid { background: #fee2e2; color: #991b1b; padding: 0.3rem 0.9rem; border-radius: 20px; font-weight: 700; font-size: 0.85rem; }
+
+    .scan-box {
+        border: 2.5px dashed #667eea; border-radius: 14px;
+        padding: 2rem; text-align: center; background: #f8f9ff;
+    }
+    #qr-video { width: 100%; max-width: 360px; border-radius: 10px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="verify-hero">
+    <div style="font-size:2.5rem;margin-bottom:0.5rem;">🔗</div>
+    <h2>Prescription Verification</h2>
+    <p>Blockchain-secured prescription authenticity check</p>
+</div>
+
+{% if result %}
+    {% if result.valid %}
+    <div class="card valid-card">
+        <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.25rem;flex-wrap:wrap;">
+            <span style="font-size:2.5rem;">✅</span>
+            <div>
+                <h3 style="color:#065f46;margin:0;">Prescription Verified</h3>
+                <p style="color:#059669;font-size:0.9rem;margin:0;">This prescription is authentic and has not been tampered with.</p>
+            </div>
+            <span class="badge-valid" style="margin-left:auto;">VALID</span>
+        </div>
+
+        {% set rx = result.prescription %}
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.75rem;margin-bottom:1rem;">
+            <div><strong style="font-size:0.75rem;color:#6b7280;text-transform:uppercase;">Patient</strong><br>{{ rx.patient_name }}</div>
+            <div><strong style="font-size:0.75rem;color:#6b7280;text-transform:uppercase;">Doctor</strong><br>{{ rx.doctor_name }}</div>
+            <div><strong style="font-size:0.75rem;color:#6b7280;text-transform:uppercase;">Issued</strong><br>{{ rx.issued }}</div>
+            <div><strong style="font-size:0.75rem;color:#6b7280;text-transform:uppercase;">Status</strong><br>
+                {% if rx.status == 'active' %}
+                <span style="font-weight:600;color:#059669;">{{ rx.status|upper }}</span>
+                {% else %}
+                <span style="font-weight:600;color:#6b7280;">{{ rx.status|upper }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if rx.diagnosis %}
+        <div style="background:#d1fae5;border-radius:8px;padding:0.6rem 1rem;margin-bottom:1rem;font-size:0.9rem;">
+            <strong>Diagnosis:</strong> {{ rx.diagnosis }}
+        </div>
+        {% endif %}
+
+        <strong style="font-size:0.85rem;">Medications ({{ rx.medications|length }}):</strong>
+        <div style="background:white;border-radius:8px;padding:0.5rem 1rem;margin-top:0.5rem;">
+            {% for med in rx.medications %}
+            <div class="med-row">
+                <span><strong>💊 {{ med.name }}</strong> — {{ med.dosage }}</span>
+                <span style="color:#6b7280;">{{ med.frequency }}{% if med.duration %} · {{ med.duration }} days{% endif %}</span>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if rx.notes %}
+        <div style="background:#fef9c3;border-radius:8px;padding:0.6rem 1rem;margin-top:0.75rem;font-size:0.88rem;">
+            <strong>📝 Notes:</strong> {{ rx.notes }}
+        </div>
+        {% endif %}
+
+        <div class="hash-box">
+            🔗 Blockchain Hash: {{ rx.hash }}
+        </div>
+        <p style="font-size:0.75rem;color:#6b7280;margin-top:0.5rem;">
+            Prescription ID: {{ rx.id }}
+        </p>
+    </div>
+
+    {% else %}
+    <div class="card invalid-card">
+        <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+            <span style="font-size:2.5rem;">❌</span>
+            <div>
+                <h3 style="color:#991b1b;margin:0;">Verification Failed</h3>
+                <p style="color:#dc2626;font-size:0.9rem;margin:0.3rem 0 0;">{{ result.reason }}</p>
+            </div>
+            <span class="badge-invalid" style="margin-left:auto;">INVALID</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <div style="margin-top:1rem;">
+        <a href="{{ url_for('verify_prescription_page') }}" class="btn btn-secondary">🔍 Verify Another</a>
+    </div>
+
+{% else %}
+<!-- No result yet — show scan + manual entry -->
+<div class="card">
+    <h3 style="margin-bottom:1rem;">📷 Scan Prescription QR</h3>
+    <div class="scan-box" id="scan-area">
+        <video id="qr-video" autoplay playsinline muted></video>
+        <p style="color:#9ca3af;font-size:0.85rem;margin-top:0.75rem;">Point camera at the prescription QR code</p>
+        <button onclick="startScan()" class="btn" style="margin-top:0.75rem;" id="scan-btn">📷 Start Camera</button>
+        <button onclick="stopScan()" class="btn btn-secondary" style="margin-top:0.75rem;display:none;" id="stop-btn">⏹ Stop</button>
+    </div>
+</div>
+
+<div class="card" style="margin-top:1rem;">
+    <h3 style="margin-bottom:1rem;">🔍 Manual Verification</h3>
+    <p style="color:#6b7280;font-size:0.88rem;margin-bottom:1rem;">Enter the Prescription ID and Blockchain Hash from the QR code.</p>
+    <form method="GET" action="{{ url_for('verify_prescription_page') }}">
+        <div style="margin-bottom:0.75rem;">
+            <label style="font-size:0.85rem;font-weight:600;display:block;margin-bottom:0.3rem;">Prescription ID</label>
+            <input type="text" name="rx_id" placeholder="e.g. a1b2c3d4-..." value="{{ rx_id or '' }}"
+                style="width:100%;padding:0.65rem;border:1.5px solid #e5e7eb;border-radius:8px;font-size:0.9rem;">
+        </div>
+        <div style="margin-bottom:1rem;">
+            <label style="font-size:0.85rem;font-weight:600;display:block;margin-bottom:0.3rem;">Blockchain Hash</label>
+            <input type="text" name="hash" id="hash-input" placeholder="64-character SHA-256 hash"
+                style="width:100%;padding:0.65rem;border:1.5px solid #e5e7eb;border-radius:8px;font-size:0.9rem;font-family:monospace;">
+        </div>
+        <button type="submit" class="btn" style="width:100%;">🔗 Verify Prescription</button>
+    </form>
+</div>
+{% endif %}
+
+<script>
+// ── QR Scanner using jsQR ─────────────────────────────────────────────────
+let scanStream = null;
+let scanInterval = null;
+
+async function startScan() {
+    document.getElementById('scan-btn').style.display = 'none';
+    document.getElementById('stop-btn').style.display = 'inline-block';
+    try {
+        scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        const video = document.getElementById('qr-video');
+        video.srcObject = scanStream;
+        video.style.display = 'block';
+
+        // Load jsQR dynamically
+        if (!window.jsQR) {
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+            s.onload = () => startDecoding(video);
+            document.head.appendChild(s);
+        } else {
+            startDecoding(video);
+        }
+    } catch(e) {
+        alert('Camera access denied. Use manual entry below.');
+        stopScan();
+    }
+}
+
+function startDecoding(video) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    scanInterval = setInterval(() => {
+        if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
+        canvas.width  = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(img.data, img.width, img.height);
+        if (code) {
+            stopScan();
+            handleQRData(code.data);
+        }
+    }, 300);
+}
+
+function stopScan() {
+    clearInterval(scanInterval);
+    if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+    document.getElementById('scan-btn').style.display = 'inline-block';
+    document.getElementById('stop-btn').style.display = 'none';
+    document.getElementById('qr-video').style.display = 'none';
+}
+
+function handleQRData(raw) {
+    try {
+        const data = JSON.parse(raw);
+        if (data.rx_id && data.hash) {
+            // Redirect to verify
+            window.location.href = `{{ url_for('verify_prescription_page') }}?rx_id=${encodeURIComponent(data.rx_id)}&hash=${encodeURIComponent(data.hash)}`;
+        } else {
+            alert('Invalid QR code — not a MediChain prescription QR.');
+        }
+    } catch(e) {
+        alert('Could not read QR code data.');
+    }
+}
+</script>
+{% endblock %}
+
+
+

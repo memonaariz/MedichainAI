@@ -1,175 +1,184 @@
-{% extends "base.html" %}
-
+﻿{% extends "base.html" %}
 {% block title %}Register - MediChain{% endblock %}
 
 {% block extra_css %}
 <style>
-    .register-container {
-        max-width: 600px;
-        margin: 2rem auto;
-    }
-    
-    .form-group {
-        margin-bottom: 1.2rem;
-    }
-    
-    label {
-        display: block;
-        margin-bottom: 0.4rem;
-        font-weight: bold;
-        font-size: 0.95rem;
-    }
-    
-    input[type="text"],
-    input[type="email"],
-    input[type="password"],
-    input[type="tel"],
-    input[type="number"],
-    select,
-    textarea {
-        width: 100%;
-        padding: 0.6rem;
-        font-size: 0.95rem;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-family: inherit;
-    }
-    
-    input:focus,
-    select:focus,
-    textarea:focus {
-        outline: none;
-        border-color: #3498db;
-        box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
-    }
-    
-    .form-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1rem;
-    }
-    
-    .form-row .form-group {
-        margin-bottom: 0;
-    }
-    
-    .checkbox-group {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0.5rem;
-        margin-top: 0.5rem;
-    }
-    
-    .checkbox-group label {
+    .register-container { max-width: 640px; margin: 2rem auto; }
+
+    .role-toggle {
         display: flex;
-        align-items: center;
-        margin-bottom: 0;
-        font-weight: normal;
+        background: #f1f5f9;
+        border-radius: 12px;
+        padding: 6px;
+        margin-bottom: 2rem;
+        gap: 6px;
     }
-    
-    .checkbox-group input[type="checkbox"] {
-        width: auto;
-        margin-right: 0.5rem;
+    .role-btn {
+        flex: 1;
+        padding: 0.75rem;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.25s;
+        background: transparent;
+        color: #64748b;
     }
-    
+    .role-btn.active {
+        background: white;
+        color: #2563eb;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+    .role-btn.active.doctor-active { color: #059669; }
+
     .form-section {
-        background: #f9f9f9;
-        padding: 1rem;
-        border-radius: 4px;
+        background: #f8fafc;
+        padding: 1.2rem;
+        border-radius: 10px;
         margin-bottom: 1rem;
-        border-left: 4px solid #3498db;
+        border-left: 4px solid #3b82f6;
     }
-    
-    .form-section h3 {
-        margin-top: 0;
-        margin-bottom: 1rem;
-        font-size: 1rem;
-        color: #2c3e50;
+    .form-section.doctor-section { border-left-color: #10b981; }
+    .form-section h3 { margin: 0 0 1rem; font-size: 0.95rem; color: #374151; }
+
+    .form-group { margin-bottom: 1rem; }
+    .form-group:last-child { margin-bottom: 0; }
+    label { display: block; margin-bottom: 0.35rem; font-weight: 600; font-size: 0.9rem; color: #374151; }
+
+    input[type="text"], input[type="email"], input[type="password"],
+    input[type="tel"], input[type="number"], select, textarea {
+        width: 100%; padding: 0.65rem 0.9rem; font-size: 0.95rem;
+        border: 1.5px solid #d1d5db; border-radius: 8px; font-family: inherit;
+        transition: border-color 0.2s;
     }
-    
-    button {
-        background-color: #27ae60;
-        width: 100%;
-        padding: 0.8rem;
-        font-size: 1rem;
-        margin-top: 1rem;
+    input:focus, select:focus, textarea:focus {
+        outline: none; border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
     }
-    
-    button:hover {
-        background-color: #229954;
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .checkbox-group { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; margin-top: 0.4rem; }
+    .checkbox-group label { display: flex; align-items: center; font-weight: normal; font-size: 0.88rem; }
+    .checkbox-group input[type="checkbox"] { width: auto; margin-right: 0.4rem; }
+
+    .submit-btn {
+        width: 100%; padding: 0.9rem; font-size: 1.05rem;
+        font-weight: 700; border: none; border-radius: 10px;
+        cursor: pointer; margin-top: 1rem; color: white;
+        background: linear-gradient(135deg, #3b82f6, #6366f1);
+        transition: opacity 0.2s;
     }
-    
-    .login-link {
-        text-align: center;
-        margin-top: 1rem;
-    }
-    
-    .login-link a {
-        color: #3498db;
-        text-decoration: none;
-    }
-    
-    .login-link a:hover {
-        text-decoration: underline;
-    }
+    .submit-btn:hover { opacity: 0.9; }
+    .submit-btn.doctor-btn { background: linear-gradient(135deg, #10b981, #059669); }
+
+    .login-link { text-align: center; margin-top: 1rem; color: #6b7280; }
+    .login-link a { color: #3b82f6; font-weight: 600; text-decoration: none; }
+
+    /* hide/show sections */
+    .patient-only, .doctor-only { transition: all 0.2s; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="register-container">
-    <div class="card">
-        <h2>📋 Register for MediChain</h2>
-        <p style="color: #666; margin-bottom: 1.5rem;">Create your account to get started with smart healthcare</p>
-        
-        <form method="POST">
-            <!-- Basic Information -->
-            <div class="form-section">
-                <h3>👤 Basic Information</h3>
-                
+<div class="card">
+    <h2 style="margin-bottom: 0.3rem;">📋 Create Account</h2>
+    <p style="color:#6b7280; margin-bottom:1.5rem;">Join MediChain — Blockchain-Secured Healthcare</p>
+
+    <!-- Role Toggle -->
+    <div class="role-toggle">
+        <button type="button" class="role-btn active" id="btn-patient" onclick="switchRole('patient')">
+            🧑‍⚕️ Patient
+        </button>
+        <button type="button" class="role-btn" id="btn-doctor" onclick="switchRole('doctor')">
+            👨‍⚕️ Doctor
+        </button>
+    </div>
+
+    <form method="POST" id="register-form">
+        <input type="hidden" name="role" id="role-input" value="patient">
+
+        <!-- Basic Info (both) -->
+        <div class="form-section">
+            <h3>👤 Basic Information</h3>
+            <div class="form-group">
+                <label>Full Name *</label>
+                <input type="text" name="full_name" placeholder="Enter your full name" required>
+            </div>
+            <div class="form-row">
                 <div class="form-group">
-                    <label for="full_name">Full Name *</label>
-                    <input type="text" id="full_name" name="full_name" required>
+                    <label>Phone Number *</label>
+                    <input type="tel" name="phone" placeholder="10-digit mobile number" required>
                 </div>
-                
+                <div class="form-group">
+                    <label>Email Address *</label>
+                    <input type="email" name="email" placeholder="your@email.com" required>
+                </div>
+            </div>
+        </div>
+
+        <!-- Doctor-only fields -->
+        <div class="form-section doctor-section doctor-only" id="doctor-fields" style="display:none;">
+            <h3>🏥 Professional Information</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Specialization *</label>
+                    <select name="specialization" id="specialization-select">
+                        <option value="">Select Specialization</option>
+                        <option value="General Physician">General Physician</option>
+                        <option value="Cardiologist">Cardiologist</option>
+                        <option value="Diabetologist">Diabetologist</option>
+                        <option value="Neurologist">Neurologist</option>
+                        <option value="Orthopedic">Orthopedic</option>
+                        <option value="Pediatrician">Pediatrician</option>
+                        <option value="Dermatologist">Dermatologist</option>
+                        <option value="Psychiatrist">Psychiatrist</option>
+                        <option value="Gynecologist">Gynecologist</option>
+                        <option value="ENT Specialist">ENT Specialist</option>
+                        <option value="Ophthalmologist">Ophthalmologist</option>
+                        <option value="Oncologist">Oncologist</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Medical License Number *</label>
+                    <input type="text" name="license_number" id="license-input" placeholder="e.g., MCI-12345">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Clinic / Hospital Name</label>
+                    <input type="text" name="clinic_name" placeholder="e.g., City Medical Center">
+                </div>
+                <div class="form-group">
+                    <label>Years of Experience</label>
+                    <input type="number" name="experience" placeholder="e.g., 10" min="0" max="60">
+                </div>
+            </div>
+        </div>
+
+        <!-- Patient-only fields -->
+        <div id="patient-fields">
+            <div class="form-section patient-only">
+                <h3>🩺 Medical Information</h3>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="age">Age *</label>
-                        <input type="number" id="age" name="age" min="1" max="120" required>
+                        <label>Age *</label>
+                        <input type="number" name="age" placeholder="Your age" min="1" max="120">
                     </div>
                     <div class="form-group">
-                        <label for="blood_group">Blood Group *</label>
-                        <select id="blood_group" name="blood_group" required>
+                        <label>Blood Group *</label>
+                        <select name="blood_group">
                             <option value="">Select Blood Group</option>
-                            <option value="O+">O+</option>
-                            <option value="O-">O-</option>
-                            <option value="A+">A+</option>
-                            <option value="A-">A-</option>
-                            <option value="B+">B+</option>
-                            <option value="B-">B-</option>
-                            <option value="AB+">AB+</option>
-                            <option value="AB-">AB-</option>
+                            <option>O+</option><option>O-</option>
+                            <option>A+</option><option>A-</option>
+                            <option>B+</option><option>B-</option>
+                            <option>AB+</option><option>AB-</option>
                         </select>
                     </div>
                 </div>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="phone">Phone Number *</label>
-                        <input type="tel" id="phone" name="phone" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="email">Email Address *</label>
-                        <input type="email" id="email" name="email" required>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Medical Information -->
-            <div class="form-section">
-                <h3>⚕️ Medical Information</h3>
-                
                 <div class="form-group">
-                    <label>Allergies (Select all that apply)</label>
+                    <label>Known Allergies</label>
                     <div class="checkbox-group">
                         <label><input type="checkbox" name="allergies" value="Penicillin"> Penicillin</label>
                         <label><input type="checkbox" name="allergies" value="Aspirin"> Aspirin</label>
@@ -179,9 +188,8 @@
                         <label><input type="checkbox" name="allergies" value="Peanuts"> Peanuts</label>
                     </div>
                 </div>
-                
                 <div class="form-group">
-                    <label>Medical History (Select all that apply)</label>
+                    <label>Medical History</label>
                     <div class="checkbox-group">
                         <label><input type="checkbox" name="medical_history" value="Diabetes"> Diabetes</label>
                         <label><input type="checkbox" name="medical_history" value="Hypertension"> Hypertension</label>
@@ -191,80 +199,109 @@
                         <label><input type="checkbox" name="medical_history" value="Arthritis"> Arthritis</label>
                     </div>
                 </div>
-                
-                <div class="form-group">
-                    <label for="current_medications">Current Medications (if any)</label>
-                    <textarea id="current_medications" name="current_medications" rows="3" placeholder="List any medications you're currently taking..."></textarea>
-                </div>
             </div>
-            
-            <!-- Insurance Information -->
-            <div class="form-section">
-                <h3>🛡️ Insurance Information</h3>
-                
+
+            <div class="form-section patient-only">
+                <h3>🛡️ Insurance (Optional)</h3>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="insurance_provider">Insurance Provider</label>
-                        <select id="insurance_provider" name="insurance_provider">
+                        <label>Insurance Provider</label>
+                        <select name="insurance_provider">
                             <option value="">Select Provider</option>
-                            <option value="Ayushman Bharat">Ayushman Bharat (PMJAY)</option>
-                            <option value="HDFC">HDFC Insurance</option>
-                            <option value="ICICI">ICICI Lombard</option>
-                            <option value="Star">Star Health</option>
-                            <option value="Aditya Birla">Aditya Birla Health</option>
-                            <option value="Other">Other</option>
+                            <option>Ayushman Bharat (PMJAY)</option>
+                            <option>HDFC Insurance</option>
+                            <option>ICICI Lombard</option>
+                            <option>Star Health</option>
+                            <option>Aditya Birla Health</option>
+                            <option>Other</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="insurance_id">Insurance ID</label>
-                        <input type="text" id="insurance_id" name="insurance_id" placeholder="Your insurance ID">
+                        <label>Insurance ID</label>
+                        <input type="text" name="insurance_id" placeholder="Your insurance ID">
                     </div>
                 </div>
             </div>
-            
-            <!-- Emergency Contact -->
-            <div class="form-section">
+
+            <div class="form-section patient-only">
                 <h3>🚨 Emergency Contact</h3>
-                
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="emergency_name">Contact Name *</label>
-                        <input type="text" id="emergency_name" name="emergency_name" required>
+                        <label>Contact Name *</label>
+                        <input type="text" name="emergency_name" placeholder="Family member name">
                     </div>
                     <div class="form-group">
-                        <label for="emergency_phone">Contact Phone *</label>
-                        <input type="tel" id="emergency_phone" name="emergency_phone" required>
+                        <label>Contact Phone *</label>
+                        <input type="tel" name="emergency_phone" placeholder="Emergency phone number">
                     </div>
                 </div>
             </div>
-            
-            <!-- Account Information -->
-            <div class="form-section">
-                <h3>🔐 Account Information</h3>
-                
+        </div>
+
+        <!-- Account credentials (both) -->
+        <div class="form-section">
+            <h3>🔐 Account Credentials</h3>
+            <div class="form-group">
+                <label>Username *</label>
+                <input type="text" name="username" placeholder="Choose a unique username" required>
+            </div>
+            <div class="form-row">
                 <div class="form-group">
-                    <label for="username">Username *</label>
-                    <input type="text" id="username" name="username" required>
+                    <label>Password *</label>
+                    <input type="password" name="password" placeholder="Min 6 characters" required>
                 </div>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="password">Password *</label>
-                        <input type="password" id="password" name="password" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="confirm_password">Confirm Password *</label>
-                        <input type="password" id="confirm_password" name="confirm_password" required>
-                    </div>
+                <div class="form-group">
+                    <label>Confirm Password *</label>
+                    <input type="password" name="confirm_password" placeholder="Repeat password" required>
                 </div>
             </div>
-            
-            <button type="submit">Create Account</button>
-            
-            <div class="login-link">
-                Already have an account? <a href="{{ url_for('login') }}">Login here</a>
-            </div>
-        </form>
-    </div>
+        </div>
+
+        <button type="submit" class="submit-btn" id="submit-btn">
+            🧑‍⚕️ Create Patient Account
+        </button>
+
+        <div class="login-link">
+            Already have an account? <a href="{{ url_for('login') }}">Login here</a>
+        </div>
+    </form>
 </div>
+</div>
+
+<script>
+function switchRole(role) {
+    document.getElementById('role-input').value = role;
+
+    const btnPatient = document.getElementById('btn-patient');
+    const btnDoctor  = document.getElementById('btn-doctor');
+    const doctorFields  = document.getElementById('doctor-fields');
+    const patientFields = document.getElementById('patient-fields');
+    const submitBtn  = document.getElementById('submit-btn');
+    const licenseInput = document.getElementById('license-input');
+    const specSelect   = document.getElementById('specialization-select');
+
+    if (role === 'doctor') {
+        btnDoctor.classList.add('active', 'doctor-active');
+        btnPatient.classList.remove('active');
+        doctorFields.style.display  = 'block';
+        patientFields.style.display = 'none';
+        submitBtn.textContent = '👨‍⚕️ Create Doctor Account';
+        submitBtn.classList.add('doctor-btn');
+        licenseInput.required = true;
+        specSelect.required   = true;
+    } else {
+        btnPatient.classList.add('active');
+        btnDoctor.classList.remove('active', 'doctor-active');
+        doctorFields.style.display  = 'none';
+        patientFields.style.display = 'block';
+        submitBtn.textContent = '🧑‍⚕️ Create Patient Account';
+        submitBtn.classList.remove('doctor-btn');
+        licenseInput.required = false;
+        specSelect.required   = false;
+    }
+}
+</script>
 {% endblock %}
+
+
+

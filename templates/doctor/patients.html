@@ -1,0 +1,90 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Patients - Doctor{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2><i class="fas fa-users"></i> Registered patients</h2>
+    <p style="color:#6b7280;margin-top:0.5rem;">
+        Every patient who registers appears here. Open a chart to write a prescription — no QR needed for demo.
+        Patient can also show QR from <strong>Profile</strong> after login.
+    </p>
+</div>
+
+<div class="card">
+    <h3 style="margin-top:0;">Open patient by MediChain ID</h3>
+    <p style="font-size:0.9rem;color:#6b7280;">ID = patient’s login username (e.g. <code>memon</code>).</p>
+    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;margin-top:1rem;">
+        <input type="text" id="lookupId" placeholder="Enter patient username / ID" style="flex:1;min-width:200px;padding:0.65rem 1rem;border:2px solid var(--border);border-radius:10px;">
+        <button type="button" class="btn" id="btnLookup"><i class="fas fa-search"></i> Open chart</button>
+    </div>
+    <p id="lookupErr" style="color:#ef4444;margin-top:0.75rem;display:none;"></p>
+</div>
+
+<div class="card">
+    <h3 style="margin-top:0;">All patients ({{ patients_list|length }})</h3>
+    {% if patients_list %}
+    <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.95rem;">
+            <thead>
+                <tr style="text-align:left;border-bottom:2px solid var(--border);">
+                    <th style="padding:0.75rem;">Name</th>
+                    <th style="padding:0.75rem;">MediChain ID</th>
+                    <th style="padding:0.75rem;">Age</th>
+                    <th style="padding:0.75rem;">Phone</th>
+                    <th style="padding:0.75rem;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in patients_list %}
+                <tr style="border-bottom:1px solid #eee;">
+                    <td style="padding:0.75rem;">{{ p.name or '—' }}</td>
+                    <td style="padding:0.75rem;"><code>{{ p.username }}</code></td>
+                    <td style="padding:0.75rem;">{{ p.age if p.age is not none else '—' }}</td>
+                    <td style="padding:0.75rem;">{{ p.phone or '—' }}</td>
+                    <td style="padding:0.75rem;">
+                        <a href="{{ url_for('doctor_write_prescription', patient_id=p.username) }}" class="btn" style="padding:0.45rem 0.9rem;font-size:0.85rem;">
+                            <i class="fas fa-prescription"></i> Prescription
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="color:#6b7280;">No patients in database yet. Ask a user to <a href="{{ url_for('register') }}">register</a> as patient.</p>
+    {% endif %}
+</div>
+
+<script>
+document.getElementById('btnLookup').addEventListener('click', function() {
+    var id = document.getElementById('lookupId').value.trim();
+    var err = document.getElementById('lookupErr');
+    err.style.display = 'none';
+    if (!id) {
+        err.textContent = 'Enter a patient ID.';
+        err.style.display = 'block';
+        return;
+    }
+    fetch('/api/doctor/patient/' + encodeURIComponent(id), { credentials: 'same-origin' })
+        .then(function(r) {
+            if (r.ok) {
+                window.location.href = '/doctor/write-prescription/' + encodeURIComponent(id);
+                return;
+            }
+            return r.json().then(function(d) { throw new Error(d.error || 'Not found'); });
+        })
+        .catch(function(e) {
+            err.textContent = e.message || 'Patient not found. Check MediChain ID.';
+            err.style.display = 'block';
+        });
+});
+document.getElementById('lookupId').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') document.getElementById('btnLookup').click();
+});
+</script>
+{% endblock %}
+
+
+

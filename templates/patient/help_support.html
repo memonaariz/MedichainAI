@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Help & Support — MediChain{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>❓ Help & Support</h2>
+    <p style="color:#6b7280;margin-top:0.3rem;">Frequently asked questions and how-to guides</p>
+</div>
+
+<div class="card">
+    <h3 style="margin-bottom:1rem;">🚀 Quick Start</h3>
+    <div style="display:grid;gap:0.75rem;">
+        <div style="background:#f0fdfa;border-radius:10px;padding:1rem;border-left:4px solid #0d9488;">
+            <strong>How do I get a prescription?</strong>
+            <p style="font-size:0.88rem;color:#374151;margin-top:0.3rem;">Ask your doctor to log in to MediChain and write a digital prescription for you. It will appear automatically in your Prescriptions section.</p>
+        </div>
+        <div style="background:#f0fdfa;border-radius:10px;padding:1rem;border-left:4px solid #0d9488;">
+            <strong>How do reminders work?</strong>
+            <p style="font-size:0.88rem;color:#374151;margin-top:0.3rem;">When a doctor writes a prescription, reminders are created automatically. You can also add personal reminders via Snap Prescription. Allow notifications for timely alerts.</p>
+        </div>
+        <div style="background:#f0fdfa;border-radius:10px;padding:1rem;border-left:4px solid #0d9488;">
+            <strong>What is the QR code on my profile?</strong>
+            <p style="font-size:0.88rem;color:#374151;margin-top:0.3rem;">Your unique patient QR code. Show it to your doctor — they can scan it to instantly view your medical history and write prescriptions.</p>
+        </div>
+        <div style="background:#f0fdfa;border-radius:10px;padding:1rem;border-left:4px solid #0d9488;">
+            <strong>How does pharmacy dispensing work?</strong>
+            <p style="font-size:0.88rem;color:#374151;margin-top:0.3rem;">Your prescription has an encrypted QR code. Show it to a registered MediChain pharmacy. They scan it, decrypt it with their pharmacy key, and dispense your medicines. Each prescription can only be dispensed once.</p>
+        </div>
+        <div style="background:#f0fdfa;border-radius:10px;padding:1rem;border-left:4px solid #0d9488;">
+            <strong>How do I upload a lab report?</strong>
+            <p style="font-size:0.88rem;color:#374151;margin-top:0.3rem;">Go to Lab Reports → Upload PDF. The system automatically extracts values and compares them with normal ranges. Use text-based PDFs from labs like Dr. Lal PathLabs, SRL, Thyrocare.</p>
+        </div>
+        <div style="background:#f0fdfa;border-radius:10px;padding:1rem;border-left:4px solid #0d9488;">
+            <strong>How do I use Emergency SOS?</strong>
+            <p style="font-size:0.88rem;color:#374151;margin-top:0.3rem;">Go to Emergency SOS and press the big red button. Your GPS location will be sent to all your emergency contacts and family members immediately.</p>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3 style="margin-bottom:1rem;">📞 Demo Credentials</h3>
+    <div style="display:grid;gap:0.5rem;">
+        <div style="background:#f9fafb;border-radius:8px;padding:0.75rem;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-weight:600;">👨‍⚕️ Doctor</span>
+            <span style="font-family:monospace;font-size:0.85rem;">doctor1 / doc123</span>
+        </div>
+        <div style="background:#f9fafb;border-radius:8px;padding:0.75rem;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-weight:600;">🏥 Pharmacy</span>
+            <span style="font-family:monospace;font-size:0.85rem;">pharmacy1 / pharma123</span>
+        </div>
+        <div style="background:#f9fafb;border-radius:8px;padding:0.75rem;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-weight:600;">👩‍⚕️ Caregiver</span>
+            <span style="font-family:monospace;font-size:0.85rem;">caregiver1 / care123</span>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="background:#1a1a2e;color:white;">
+    <h3 style="margin-bottom:0.75rem;">🔗 About MediChain</h3>
+    <p style="font-size:0.88rem;opacity:0.85;line-height:1.6;">MediChain is a blockchain-secured healthcare management platform. All prescriptions are hashed with SHA-256 and stored on an immutable blockchain. Pharmacy dispensing uses AES-256 encryption. Your medical data is tamper-proof and permanently verifiable.</p>
+    <div style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+        <span style="background:rgba(255,255,255,0.1);padding:0.25rem 0.7rem;border-radius:20px;font-size:0.78rem;">SHA-256 Blockchain</span>
+        <span style="background:rgba(255,255,255,0.1);padding:0.25rem 0.7rem;border-radius:20px;font-size:0.78rem;">AES-256 Encryption</span>
+        <span style="background:rgba(255,255,255,0.1);padding:0.25rem 0.7rem;border-radius:20px;font-size:0.78rem;">PWA</span>
+        <span style="background:rgba(255,255,255,0.1);padding:0.25rem 0.7rem;border-radius:20px;font-size:0.78rem;">Role-Based Access</span>
+    </div>
+</div>
+
+<div style="margin-top:1rem;">
+    <a href="{{ url_for('patient_dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+</div>
+{% endblock %}

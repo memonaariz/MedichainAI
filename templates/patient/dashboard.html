@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}Patient Dashboard{% endblock %}
 
@@ -207,6 +207,13 @@
     </div>
 </div>
 
+<div class="card" style="background:#f0f9ff;border:1px solid #bae6fd;">
+    <p style="margin:0;font-size:0.95rem;color:#0c4a6e;">
+        <strong>Your MediChain ID:</strong> <code>{{ user.username }}</code> — share with your doctor or open
+        <a href="{{ url_for('profile') }}" style="color:#0369a1;font-weight:600;">Profile</a> for QR code.
+    </p>
+</div>
+
 <div class="card">
     <h3 style="margin-bottom: 1rem;"><i class="fas fa-chart-line"></i> Quick Stats</h3>
     <div class="stats-grid">
@@ -257,15 +264,6 @@
         </a>
     </div>
     
-    <div class="dashboard-card">
-        <h3><i class="fas fa-shopping-cart" style="color: #38f9d7;"></i> Buy Medicines</h3>
-        <p class="description">Order medicines from trusted pharmacies</p>
-        <a href="https://www.1mg.com" target="_blank" class="btn">
-            <i class="fas fa-external-link-alt"></i> 1mg Pharmacy
-        </a>
-        <div class="feature-badge"><i class="fas fa-truck"></i> Home Delivery</div>
-    </div>
-    
     <div class="dashboard-card" style="border-left: 4px solid #ff0844;">
         <h3><i class="fas fa-user-md" style="color: #ff0844;"></i> Emergency Doctors</h3>
         <p class="description">Mumbai area doctors with 24/7 emergency contact</p>
@@ -284,15 +282,6 @@
     </div>
     
     <div class="dashboard-card">
-        <h3><i class="fas fa-chart-bar" style="color: #fed6e3;"></i> Adherence Tracking</h3>
-        <p class="description">Monitor your medication compliance</p>
-        <a href="{{ url_for('patient_adherence_tracking') }}" class="btn">
-            <i class="fas fa-chart-bar"></i> View Stats
-        </a>
-        <div class="feature-badge"><i class="fas fa-trophy"></i> Track Progress</div>
-    </div>
-    
-    <div class="dashboard-card">
         <h3><i class="fas fa-flask" style="color: #ff6a88;"></i> Lab Reports</h3>
         <p class="description">Upload and manage test results</p>
         <a href="{{ url_for('patient_lab_reports') }}" class="btn">
@@ -300,7 +289,16 @@
         </a>
         <div class="feature-badge"><i class="fas fa-lock"></i> Encrypted Storage</div>
     </div>
-    
+
+    <div class="dashboard-card">
+        <h3><i class="fas fa-shopping-cart" style="color: #38f9d7;"></i> Compare & Buy</h3>
+        <p class="description">Compare prices across 4 trusted pharmacies. Best deals guaranteed.</p>
+        <button class="btn" onclick="openCompareBuy()">
+            <i class="fas fa-store"></i> Compare & Buy
+        </button>
+        <div class="feature-badge"><i class="fas fa-truck"></i> Home Delivery Available</div>
+    </div>
+
     <div class="dashboard-card">
         <h3><i class="fas fa-comments" style="color: #f5576c;"></i> Doctor Messages</h3>
         <p class="description">Secure communication with your doctor</p>
@@ -376,14 +374,103 @@
 {% endif %}
 
 <script>
-function buyMedicine(medicineName) {
-    fetch(`/api/patient/buy-medicine/${medicineName}`)
+function openCompareBuy() {
+    document.getElementById('dash-buy-modal').style.display = 'flex';
+    document.getElementById('dash-medicine-input').value = '';
+    document.getElementById('dash-links').innerHTML = '';
+    document.getElementById('dash-modal-title').textContent = '🛒 Compare & Buy Medicine';
+}
+
+function searchMedicineFromDash() {
+    const name = document.getElementById('dash-medicine-input').value.trim();
+    if (!name) { alert('Please enter a medicine name'); return; }
+    loadPlatforms(name);
+}
+
+function loadPlatforms(medicineName) {
+    document.getElementById('dash-modal-title').textContent = '🛒 Buy: ' + medicineName;
+    const linksDiv = document.getElementById('dash-links');
+    linksDiv.innerHTML = '<p style="color:#888;text-align:center;padding:1rem;">Loading...</p>';
+
+    fetch(`/api/patient/buy-medicine/${encodeURIComponent(medicineName)}`)
         .then(r => r.json())
         .then(data => {
-            if (data.success) {
-                window.open(data.link, '_blank');
-            }
-        });
+            if (!data.success) { linksDiv.innerHTML = '<p style="color:red;">Error loading platforms.</p>'; return; }
+            linksDiv.innerHTML = '';
+            data.platforms.forEach(p => {
+                linksDiv.innerHTML += `
+                    <a href="${p.url}" target="_blank" rel="noopener noreferrer"
+                       style="display:flex;align-items:center;justify-content:space-between;
+                              background:#f8f9fa;border:1.5px solid #e0e0e0;border-radius:10px;
+                              padding:0.85rem 1rem;margin-bottom:0.6rem;text-decoration:none;color:#222;
+                              transition:box-shadow 0.2s;"
+                       onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.12)'"
+                       onmouseout="this.style.boxShadow='none'">
+                        <div style="display:flex;align-items:center;gap:0.75rem;">
+                            <span style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:10px;background:${p.logo_bg || '#667eea'};color:white;font-weight:800;font-size:0.75rem;flex-shrink:0;">${p.logo}</span>
+                            <div>
+                                <div style="font-weight:700;font-size:0.95rem;">${p.name}</div>
+                                <div style="font-size:0.78rem;color:#666;">${p.description}</div>
+                            </div>
+                        </div>
+                        <span style="background:#bbdefb;color:#0d47a1;
+                                     padding:0.2rem 0.55rem;border-radius:20px;font-size:0.72rem;font-weight:600;white-space:nowrap;">
+                            ${p.badge}
+                        </span>
+                    </a>`;
+            });
+        })
+        .catch(() => { linksDiv.innerHTML = '<p style="color:red;">Network error. Please try again.</p>'; });
 }
+
+function buyMedicine(medicineName) {
+    document.getElementById('dash-buy-modal').style.display = 'flex';
+    document.getElementById('dash-medicine-input').value = medicineName;
+    loadPlatforms(medicineName);
+}
+
+function closeDashModal() {
+    document.getElementById('dash-buy-modal').style.display = 'none';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('dash-buy-modal').addEventListener('click', function(e) {
+        if (e.target === this) closeDashModal();
+    });
+    document.getElementById('dash-medicine-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') searchMedicineFromDash();
+    });
+});
 </script>
+
+<!-- Compare & Buy Modal -->
+<div id="dash-buy-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:white;border-radius:16px;padding:2rem;max-width:560px;width:92%;max-height:90vh;overflow-y:auto;position:relative;">
+        <button onclick="closeDashModal()" style="position:absolute;top:1rem;right:1rem;background:#e74c3c;color:white;border:none;border-radius:50%;width:32px;height:32px;font-size:1.1rem;cursor:pointer;">✕</button>
+
+        <h3 id="dash-modal-title" style="margin-bottom:1rem;">🛒 Compare & Buy Medicine</h3>
+
+        <!-- Search bar -->
+        <div style="display:flex;gap:0.5rem;margin-bottom:1.2rem;">
+            <input type="text" id="dash-medicine-input" placeholder="Enter medicine name (e.g. Metformin, Amlong...)"
+                style="flex:1;padding:0.65rem 1rem;border:1.5px solid #ddd;border-radius:8px;font-size:0.95rem;">
+            <button onclick="searchMedicineFromDash()"
+                style="padding:0.65rem 1.2rem;background:#3498db;color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;white-space:nowrap;">
+                🔍 Search
+            </button>
+        </div>
+
+        <!-- Pharmacy links -->
+        <div id="dash-links"></div>
+
+        <p style="margin-top:1rem;font-size:0.75rem;color:#999;text-align:center;">
+            ⚠️ Always buy medicines with a valid prescription. Prices may vary across platforms.
+        </p>
+    </div>
+</div>
+
 {% endblock %}
+
+
+
+

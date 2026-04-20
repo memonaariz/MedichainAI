@@ -1,0 +1,450 @@
+﻿{% extends "base.html" %}
+{% block title %}Pharmacy Portal — MediChain{% endblock %}
+
+{% block extra_css %}
+<style>
+    .ph-hero {
+        background: linear-gradient(135deg, #0f766e, #0d9488);
+        color: white; border-radius: 16px;
+        padding: 1.75rem 2rem; margin-bottom: 1.5rem;
+    }
+    .ph-hero h2 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+    .ph-hero p  { opacity: 0.88; font-size: 0.92rem; }
+
+    /* Tab row */
+    .tab-row { display:flex; border-bottom:2px solid #e5e7eb; margin-bottom:1.25rem; gap:0; }
+    .tab-btn {
+        padding:0.7rem 1.2rem; background:none; border:none;
+        cursor:pointer; font-size:0.9rem; font-weight:600;
+        color:#9ca3af; border-bottom:3px solid transparent; margin-bottom:-2px;
+        transition:all 0.2s;
+    }
+    .tab-btn.active { color:#0d9488; border-bottom-color:#0d9488; }
+
+    /* Upload zone */
+    .upload-zone {
+        border:2.5px dashed #0d9488; border-radius:12px;
+        padding:2rem; text-align:center; background:#f0fdfa;
+        cursor:pointer; transition:all 0.2s;
+    }
+    .upload-zone:hover { background:#ccfbf1; }
+    .upload-zone input { display:none; }
+
+    /* Camera */
+    #ph-video { width:100%; border-radius:10px; max-height:300px; object-fit:cover; }
+
+    /* Input */
+    .ph-input {
+        width:100%; padding:0.7rem 1rem;
+        border:1.5px solid #e5e7eb; border-radius:10px;
+        font-size:0.95rem; margin-bottom:0.75rem;
+        transition:border-color 0.2s;
+    }
+    .ph-input:focus { outline:none; border-color:#0d9488; }
+
+    /* Decrypt btn */
+    .decrypt-btn {
+        width:100%; padding:0.85rem; border:none; border-radius:10px;
+        background:linear-gradient(135deg,#0f766e,#0d9488);
+        color:white; font-weight:700; font-size:1rem;
+        cursor:pointer; transition:opacity 0.2s;
+    }
+    .decrypt-btn:hover { opacity:0.9; }
+
+    /* Result */
+    .rx-card {
+        background:white; border-radius:14px;
+        border-left:5px solid #0d9488;
+        padding:1.5rem; box-shadow:0 4px 16px rgba(0,0,0,0.08);
+        margin-top:1.5rem;
+    }
+    .rx-card.error-card { border-left-color:#ef4444; background:#fef2f2; }
+    .med-row {
+        display:flex; justify-content:space-between; flex-wrap:wrap;
+        padding:0.55rem 0; border-bottom:1px solid #e5e7eb; font-size:0.9rem; gap:0.3rem;
+    }
+    .med-row:last-child { border-bottom:none; }
+    .hash-box {
+        background:#134e4a; color:#99f6e4;
+        font-family:monospace; font-size:0.72rem;
+        padding:0.65rem 1rem; border-radius:8px;
+        word-break:break-all; margin-top:0.75rem;
+    }
+    .dispense-btn {
+        width:100%; padding:1rem; border:none; border-radius:10px;
+        background:linear-gradient(135deg,#059669,#10b981);
+        color:white; font-weight:700; font-size:1.05rem;
+        cursor:pointer; margin-top:1rem; transition:opacity 0.2s;
+    }
+    .dispense-btn:hover { opacity:0.9; }
+    .dispense-btn:disabled { background:#9ca3af; cursor:not-allowed; }
+
+    /* Success overlay */
+    .success-overlay {
+        display:none; position:fixed; inset:0;
+        background:rgba(0,0,0,0.65); z-index:2000;
+        align-items:center; justify-content:center;
+    }
+    .success-box {
+        background:white; border-radius:20px; padding:2.5rem;
+        text-align:center; max-width:360px; width:90%;
+    }
+
+    .info-strip {
+        background:#f0fdfa; border:1px solid #99f6e4;
+        border-radius:10px; padding:0.75rem 1rem;
+        font-size:0.82rem; color:#0f766e; margin-bottom:1.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="ph-hero">
+    <div style="font-size:1.8rem;margin-bottom:0.4rem;">🏪</div>
+    <h2>Pharmacy Dispensing Portal</h2>
+    <p>Scan or upload patient's prescription QR → Decrypt → Dispense once → Blockchain logged</p>
+</div>
+
+<div class="info-strip">
+    🔒 Prescriptions are <strong>AES-256 encrypted</strong>. Only pharmacies with a valid Pharmacy ID can decrypt.
+    Each prescription can be dispensed <strong>only once</strong> — prevents misuse and ghost prescriptions.
+</div>
+
+<div class="card">
+    <!-- Pharmacy credentials — always visible -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.25rem;">
+        <div>
+            <label style="font-size:0.8rem;font-weight:600;color:#6b7280;display:block;margin-bottom:0.3rem;">PHARMACY ID</label>
+            <input class="ph-input" style="margin:0;" type="text" id="pharmacy-id-input"
+                placeholder="e.g. MediChain_PHARMACY" value="MediChain_PHARMACY">
+        </div>
+        <div>
+            <label style="font-size:0.8rem;font-weight:600;color:#6b7280;display:block;margin-bottom:0.3rem;">PHARMACIST NAME</label>
+            <input class="ph-input" style="margin:0;" type="text" id="pharmacist-name" placeholder="Your name">
+        </div>
+    </div>
+
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin-bottom:1.25rem;">
+
+    <!-- Tabs -->
+    <div class="tab-row">
+        <button class="tab-btn active" id="tab-upload" onclick="showTab('upload')">📁 Upload QR Image</button>
+        <button class="tab-btn" id="tab-camera" onclick="showTab('camera')">📷 Camera Scan</button>
+        <button class="tab-btn" id="tab-manual" onclick="showTab('manual')">⌨️ Manual ID</button>
+    </div>
+
+    <!-- UPLOAD TAB -->
+    <div id="pane-upload">
+        <div class="upload-zone" onclick="document.getElementById('qr-file').click()">
+            <input type="file" id="qr-file" accept="image/*" onchange="handleQRUpload(this)">
+            <div style="font-size:2.5rem;margin-bottom:0.5rem;">🖼️</div>
+            <p style="font-weight:600;color:#0f766e;">Click to upload QR code image</p>
+            <p style="font-size:0.82rem;color:#9ca3af;margin-top:0.25rem;">JPG, PNG — screenshot or photo of prescription QR</p>
+        </div>
+        <div id="upload-status" style="margin-top:0.75rem;font-size:0.85rem;color:#0d9488;text-align:center;"></div>
+    </div>
+
+    <!-- CAMERA TAB -->
+    <div id="pane-camera" style="display:none;">
+        <video id="ph-video" autoplay playsinline muted style="display:none;"></video>
+        <div id="cam-placeholder" style="text-align:center;padding:1.5rem;background:#f0fdfa;border-radius:10px;">
+            <div style="font-size:2.5rem;margin-bottom:0.5rem;">📷</div>
+            <p style="font-weight:600;color:#0f766e;">Point camera at prescription QR code</p>
+            <button onclick="startCam()" class="decrypt-btn" style="width:auto;padding:0.65rem 1.5rem;margin-top:0.75rem;">
+                Start Camera
+            </button>
+        </div>
+        <button onclick="stopCam()" id="stop-cam-btn" style="display:none;width:100%;margin-top:0.5rem;padding:0.6rem;background:#e5e7eb;color:#374151;border:none;border-radius:8px;font-weight:600;cursor:pointer;">
+            ⏹ Stop Camera
+        </button>
+    </div>
+
+    <!-- MANUAL TAB -->
+    <div id="pane-manual" style="display:none;">
+        <label style="font-size:0.85rem;font-weight:600;color:#374151;display:block;margin-bottom:0.4rem;">
+            Prescription ID
+        </label>
+        <input class="ph-input" type="text" id="manual-rx-id"
+            placeholder="Paste Prescription ID from patient's app">
+        <button onclick="decryptManual()" class="decrypt-btn">🔓 Decrypt Prescription</button>
+    </div>
+</div>
+
+<!-- Result -->
+<div id="result-area"></div>
+
+<!-- Success overlay -->
+<div class="success-overlay" id="success-overlay">
+    <div class="success-box">
+        <div style="font-size:4rem;margin-bottom:0.75rem;">✅</div>
+        <h2 style="color:#059669;margin-bottom:0.5rem;">Dispensed!</h2>
+        <p style="color:#374151;font-size:0.9rem;" id="success-msg">Prescription dispensed successfully.</p>
+        <p style="font-size:0.78rem;color:#9ca3af;margin-top:0.5rem;">
+            Logged on blockchain. Cannot be used again.
+        </p>
+        <button onclick="resetPortal()" class="dispense-btn" style="margin-top:1.5rem;">
+            🔄 Scan Next Prescription
+        </button>
+    </div>
+</div>
+
+<script>
+let camStream = null;
+let camInterval = null;
+let currentRxId = null;
+
+// ── Tabs ──────────────────────────────────────────────────────────────────
+function showTab(tab) {
+    ['upload','camera','manual'].forEach(t => {
+        document.getElementById('pane-' + t).style.display = t === tab ? 'block' : 'none';
+        document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+    });
+    if (tab !== 'camera') stopCam();
+}
+
+// ── Upload QR Image ───────────────────────────────────────────────────────
+function handleQRUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+    document.getElementById('upload-status').textContent = '🔍 Reading QR code...';
+
+    const img = new Image();
+    img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width; canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+        loadJsQR(() => {
+            const code = jsQR(imageData.data, imageData.width, imageData.height);
+            if (code) {
+                document.getElementById('upload-status').textContent = '✅ QR detected — decrypting...';
+                handleQRData(code.data);
+            } else {
+                document.getElementById('upload-status').textContent = '❌ No QR code found in image. Try a clearer photo.';
+            }
+        });
+    };
+    img.src = URL.createObjectURL(file);
+}
+
+// ── Camera ────────────────────────────────────────────────────────────────
+async function startCam() {
+    document.getElementById('cam-placeholder').style.display = 'none';
+    const video = document.getElementById('ph-video');
+    video.style.display = 'block';
+    document.getElementById('stop-cam-btn').style.display = 'block';
+    try {
+        camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        video.srcObject = camStream;
+        loadJsQR(() => startCamDecode(video));
+    } catch(e) {
+        stopCam();
+        alert('Camera denied. Use Upload tab instead.');
+    }
+}
+
+function startCamDecode(video) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    camInterval = setInterval(() => {
+        if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(img.data, img.width, img.height);
+        if (code) { stopCam(); handleQRData(code.data); }
+    }, 300);
+}
+
+function stopCam() {
+    clearInterval(camInterval); camInterval = null;
+    if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+    const video = document.getElementById('ph-video');
+    if (video) video.style.display = 'none';
+    const ph = document.getElementById('cam-placeholder');
+    if (ph) ph.style.display = 'block';
+    const sb = document.getElementById('stop-cam-btn');
+    if (sb) sb.style.display = 'none';
+}
+
+// ── Manual ────────────────────────────────────────────────────────────────
+function decryptManual() {
+    const rxId = document.getElementById('manual-rx-id').value.trim();
+    if (!rxId) { alert('Please enter a Prescription ID.'); return; }
+    decrypt(rxId);
+}
+
+// ── QR Data handler ───────────────────────────────────────────────────────
+function handleQRData(raw) {
+    try {
+        const data = JSON.parse(raw);
+        if (data.rx_id) {
+            decrypt(data.rx_id);
+        } else {
+            showError('Not a valid MediChain prescription QR code.');
+        }
+    } catch(e) {
+        showError('Could not read QR data. Make sure it is a MediChain prescription QR.');
+    }
+}
+
+// ── Decrypt ───────────────────────────────────────────────────────────────
+async function decrypt(rxId) {
+    currentRxId = rxId;
+    const pharmId   = (document.getElementById('pharmacy-id-input').value.trim() || 'MediChain_PHARMACY').toUpperCase();
+    const pharmName = document.getElementById('pharmacist-name').value.trim() || 'Pharmacist';
+
+    document.getElementById('result-area').innerHTML = `
+        <div class="rx-card" style="text-align:center;padding:2rem;">
+            <div style="font-size:2rem;margin-bottom:0.5rem;">🔓</div>
+            <p style="font-weight:600;color:#0f766e;">Decrypting prescription...</p>
+            <p style="font-size:0.82rem;color:#9ca3af;margin-top:0.3rem;">Verifying blockchain hash...</p>
+        </div>`;
+
+    try {
+        const res = await fetch('/api/pharmacy/decrypt', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rx_id: rxId, pharmacy_id: pharmId })
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+            showError(data.error, data.already_dispensed);
+            return;
+        }
+        renderRx(data.prescription, pharmId, pharmName);
+    } catch(e) {
+        showError('Network error. Please try again.');
+    }
+}
+
+// ── Render decrypted prescription ─────────────────────────────────────────
+function renderRx(rx, pharmId, pharmName) {
+    const meds = (rx.medications || []).map(m => `
+        <div class="med-row">
+            <span><strong>💊 ${m.name}</strong>${m.dosage ? ' — ' + m.dosage : ''}</span>
+            <span style="color:#6b7280;">${m.frequency || ''}${m.duration ? ' · ' + m.duration + ' days' : ''}</span>
+        </div>`).join('');
+
+    document.getElementById('result-area').innerHTML = `
+        <div class="rx-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;margin-bottom:1.25rem;">
+                <div>
+                    <h3 style="margin:0;color:#0f766e;">🔓 Prescription Verified</h3>
+                    <p style="color:#6b7280;font-size:0.82rem;margin:0.2rem 0 0;">Decrypted successfully — ready to dispense</p>
+                </div>
+                <span style="background:#d1fae5;color:#065f46;padding:0.3rem 0.9rem;border-radius:20px;font-weight:700;font-size:0.82rem;">✅ VALID</span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:0.75rem;margin-bottom:1rem;background:#f0fdfa;padding:1rem;border-radius:10px;">
+                <div><div style="font-size:0.7rem;color:#6b7280;font-weight:600;text-transform:uppercase;">Patient</div><div style="font-weight:600;">${rx.patient_name || rx.patient_id}</div></div>
+                <div><div style="font-size:0.7rem;color:#6b7280;font-weight:600;text-transform:uppercase;">Doctor</div><div style="font-weight:600;">${rx.doctor_name || rx.doctor_id}</div></div>
+                <div><div style="font-size:0.7rem;color:#6b7280;font-weight:600;text-transform:uppercase;">Issued</div><div style="font-weight:600;">${rx.issued || ''}</div></div>
+                <div><div style="font-size:0.7rem;color:#6b7280;font-weight:600;text-transform:uppercase;">Pharmacy</div><div style="font-weight:600;">${pharmId}</div></div>
+            </div>
+
+            ${rx.diagnosis ? `<div style="background:#d1fae5;border-radius:8px;padding:0.6rem 1rem;margin-bottom:1rem;font-size:0.9rem;"><strong>🩺 Diagnosis:</strong> ${rx.diagnosis}</div>` : ''}
+
+            <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.4rem;">💊 Medications (${(rx.medications||[]).length})</div>
+            <div style="background:#f9fafb;border-radius:8px;padding:0.5rem 1rem;">${meds}</div>
+
+            ${rx.notes ? `<div style="background:#fef9c3;border-radius:8px;padding:0.6rem 1rem;margin-top:0.75rem;font-size:0.88rem;"><strong>📝 Notes:</strong> ${rx.notes}</div>` : ''}
+
+            <div class="hash-box">🔗 Blockchain Hash: ${rx.hash}</div>
+
+            <div style="background:#fef3c7;border-radius:8px;padding:0.75rem 1rem;margin-top:1rem;font-size:0.82rem;color:#92400e;">
+                ⚠️ <strong>One-time use only.</strong> After dispensing, this prescription is permanently marked on the blockchain and cannot be reused.
+            </div>
+
+            <button class="dispense-btn" id="dispense-btn"
+                onclick="dispense('${rx.rx_id || currentRxId}', '${pharmId}', '${pharmName.replace(/'/g,"\\'")}')">
+                ✅ Confirm & Dispense Medicines
+            </button>
+        </div>`;
+}
+
+// ── Dispense ──────────────────────────────────────────────────────────────
+async function dispense(rxId, pharmId, pharmName) {
+    const btn = document.getElementById('dispense-btn');
+    btn.disabled = true; btn.textContent = 'Processing...';
+
+    try {
+        const res = await fetch('/api/pharmacy/dispense', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rx_id: rxId, pharmacy_id: pharmId, pharmacist_name: pharmName })
+        });
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById('success-msg').textContent =
+                `Dispensed at ${new Date(data.dispensed_at).toLocaleTimeString()}. Blockchain record created.`;
+            document.getElementById('success-overlay').style.display = 'flex';
+        } else {
+            alert('Error: ' + data.error);
+            btn.disabled = false;
+            btn.textContent = '✅ Confirm & Dispense Medicines';
+        }
+    } catch(e) {
+        alert('Network error.'); btn.disabled = false;
+        btn.textContent = '✅ Confirm & Dispense Medicines';
+    }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function showError(msg, alreadyDispensed) {
+    document.getElementById('result-area').innerHTML = `
+        <div class="rx-card error-card" style="margin-top:1.5rem;">
+            <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+                <span style="font-size:2.5rem;">❌</span>
+                <div>
+                    <h3 style="color:#991b1b;margin:0;">Failed</h3>
+                    <p style="color:#dc2626;margin:0.3rem 0 0;font-size:0.9rem;">${msg}</p>
+                </div>
+            </div>
+            ${alreadyDispensed ? `<div style="background:#fee2e2;border-radius:8px;padding:0.75rem;margin-top:1rem;font-size:0.85rem;color:#991b1b;">
+                🚫 This prescription was already dispensed. This system prevents prescription reuse and drug abuse.
+            </div>` : ''}
+        </div>`;
+}
+
+function resetPortal() {
+    document.getElementById('success-overlay').style.display = 'none';
+    document.getElementById('result-area').innerHTML = '';
+    document.getElementById('manual-rx-id').value = '';
+    document.getElementById('upload-status').textContent = '';
+    document.getElementById('qr-file').value = '';
+    currentRxId = null;
+}
+
+function loadJsQR(cb) {
+    if (window.jsQR) { cb(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+    s.onload = cb;
+    document.head.appendChild(s);
+}
+
+// Drag & drop on upload zone
+const zone = document.querySelector('.upload-zone');
+if (zone) {
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.background = '#ccfbf1'; });
+    zone.addEventListener('dragleave', () => { zone.style.background = '#f0fdfa'; });
+    zone.addEventListener('drop', e => {
+        e.preventDefault(); zone.style.background = '#f0fdfa';
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) {
+            const dt = new DataTransfer(); dt.items.add(file);
+            document.getElementById('qr-file').files = dt.files;
+            handleQRUpload(document.getElementById('qr-file'));
+        }
+    });
+}
+</script>
+{% endblock %}
+
+
+

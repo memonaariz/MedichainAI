@@ -1,156 +1,238 @@
-{% extends "base.html" %}
-
-{% block title %}Doctor Messages - MediChain{% endblock %}
+﻿{% extends "base.html" %}
+{% block title %}Ask Your Doctor - MediChain{% endblock %}
 
 {% block extra_css %}
 <style>
-    .message-container {
-        display: grid;
-        grid-template-columns: 1fr 2fr;
-        gap: 1.5rem;
-        margin-top: 1.5rem;
-    }
-    
-    .doctors-list {
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        overflow: hidden;
-    }
-    
-    .doctor-item {
-        padding: 1rem;
-        border-bottom: 1px solid #eee;
-        cursor: pointer;
-    }
-    
-    .doctor-item:hover {
-        background: #f9f9f9;
-    }
-    
-    .chat-area {
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        display: flex;
-        flex-direction: column;
-        height: 500px;
-    }
-    
-    .chat-messages {
-        flex: 1;
-        overflow-y: auto;
-        padding: 1rem;
-    }
-    
-    .message {
-        margin-bottom: 1rem;
-        display: flex;
-    }
-    
-    .message.sent {
-        justify-content: flex-end;
-    }
-    
-    .message-bubble {
-        max-width: 70%;
-        padding: 0.8rem 1rem;
-        border-radius: 12px;
-    }
-    
-    .message.sent .message-bubble {
-        background: #3498db;
-        color: white;
-    }
-    
-    .message.received .message-bubble {
-        background: #f0f0f0;
-        color: #333;
-    }
-    
-    .chat-input {
-        padding: 1rem;
-        border-top: 1px solid #eee;
-        display: flex;
-        gap: 0.5rem;
-    }
-    
-    .chat-input input {
-        flex: 1;
-        padding: 0.6rem;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-    }
-    
-    .chat-input button {
-        padding: 0.6rem 1rem;
-        background: #3498db;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-    }
+.page-header { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 1.8rem; border-radius: 14px; margin-bottom: 1.5rem; }
+.page-header h2 { font-size: 1.7rem; margin-bottom: 0.3rem; }
+
+.chat-layout { display: grid; grid-template-columns: 280px 1fr; gap: 1.2rem; height: 600px; }
+@media (max-width: 640px) { .chat-layout { grid-template-columns: 1fr; height: auto; } }
+
+/* Doctor list */
+.doctor-list { background: white; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.09); overflow: hidden; display: flex; flex-direction: column; }
+.doctor-list-header { padding: 1rem; background: #f8fafc; border-bottom: 1px solid #e5e7eb; font-weight: 700; font-size: 0.9rem; color: #374151; }
+.doctor-item { padding: 1rem; border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background 0.15s; display: flex; align-items: center; gap: 0.8rem; }
+.doctor-item:hover { background: #f0f4ff; }
+.doctor-item.active { background: #ede9fe; border-left: 3px solid #667eea; }
+.doc-avatar-sm { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1rem; flex-shrink: 0; }
+.doc-item-name { font-weight: 600; font-size: 0.9rem; color: #1a1a2e; }
+.doc-item-sub  { font-size: 0.75rem; color: #888; margin-top: 0.1rem; }
+.unread-badge  { background: #667eea; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; margin-left: auto; }
+
+/* Chat area */
+.chat-area { background: white; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.09); display: flex; flex-direction: column; overflow: hidden; }
+.chat-header { padding: 1rem 1.2rem; background: #f8fafc; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 0.8rem; }
+.chat-header-name { font-weight: 700; font-size: 1rem; color: #1a1a2e; }
+.chat-header-sub  { font-size: 0.78rem; color: #888; }
+.online-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; }
+
+.chat-messages { flex: 1; overflow-y: auto; padding: 1.2rem; background: #f8fafc; min-height: 300px; }
+.msg-row { display: flex; margin-bottom: 1rem; }
+.msg-row.sent     { justify-content: flex-end; }
+.msg-row.received { justify-content: flex-start; }
+.bubble { max-width: 72%; padding: 0.7rem 1rem; border-radius: 14px; font-size: 0.9rem; line-height: 1.5; }
+.bubble.sent     { background: #667eea; color: white; border-bottom-right-radius: 4px; }
+.bubble.received { background: white; color: #1a1a2e; border-bottom-left-radius: 4px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+.msg-time { font-size: 0.68rem; opacity: 0.65; margin-top: 0.3rem; text-align: right; }
+.msg-sender { font-size: 0.72rem; font-weight: 700; margin-bottom: 0.2rem; color: #667eea; }
+
+.chat-input-area { padding: 1rem; border-top: 1px solid #e5e7eb; display: flex; gap: 0.6rem; align-items: flex-end; }
+.chat-input-area textarea { flex: 1; padding: 0.7rem 1rem; border: 1.5px solid #ddd; border-radius: 12px; font-size: 0.9rem; resize: none; font-family: inherit; max-height: 100px; }
+.chat-input-area textarea:focus { outline: none; border-color: #667eea; }
+.send-btn { padding: 0.7rem 1.2rem; background: #667eea; color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 0.9rem; white-space: nowrap; }
+.send-btn:hover { background: #5568d3; }
+
+.empty-chat { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #aaa; text-align: center; padding: 2rem; }
+.no-doctors { text-align: center; padding: 2rem; color: #888; }
+
+/* Quick questions */
+.quick-questions { padding: 0.8rem 1.2rem; border-top: 1px solid #f1f5f9; background: #fafafa; }
+.quick-q-label { font-size: 0.75rem; color: #888; margin-bottom: 0.4rem; }
+.quick-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.quick-chip { padding: 0.3rem 0.7rem; background: #ede9fe; color: #667eea; border-radius: 20px; font-size: 0.75rem; cursor: pointer; border: none; font-weight: 600; }
+.quick-chip:hover { background: #667eea; color: white; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="card">
-    <h2>💬 Doctor Messages</h2>
-    <p style="color: #666; margin-top: 0.5rem;">Chat with your doctors</p>
+<div class="page-header">
+    <h2>💬 Ask Your Doctor</h2>
+    <p style="opacity:0.9; font-size:0.92rem;">Send questions to doctors who have treated you — get replies directly here</p>
 </div>
 
-<div class="message-container">
-    <div class="doctors-list">
-        <div class="doctor-item" onclick="selectDoctor('doctor1', 'Dr. Sharma')">
-            <div style="font-weight: bold;">👨‍⚕️ Dr. Sharma</div>
-            <div style="font-size: 0.85rem; color: #999;">General Physician</div>
-        </div>
-        <div class="doctor-item" onclick="selectDoctor('doctor2', 'Dr. Patel')">
-            <div style="font-weight: bold;">👨‍⚕️ Dr. Patel</div>
-            <div style="font-size: 0.85rem; color: #999;">Cardiologist</div>
-        </div>
-    </div>
-    
-    <div class="chat-area">
-        <div style="padding: 1rem; border-bottom: 1px solid #eee; background: #f9f9f9;">
-            <h4 id="selectedDoctor" style="margin: 0;">👨‍⚕️ Dr. Sharma</h4>
-        </div>
-        
-        <div class="chat-messages" id="chatMessages">
-            <div class="message received">
-                <div class="message-bubble">Hello! How can I help?</div>
+{% if not my_doctors %}
+<div class="card no-doctors">
+    <p style="font-size:2rem;">👨‍⚕️</p>
+    <h3>No doctors yet</h3>
+    <p>Once a doctor writes a prescription for you, you can message them here.</p>
+    <a href="{{ url_for('patient_emergency_doctors') }}" class="btn" style="margin-top:1rem;">Find a Doctor</a>
+</div>
+{% else %}
+<div class="chat-layout">
+
+    <!-- Doctor List -->
+    <div class="doctor-list">
+        <div class="doctor-list-header">👨‍⚕️ Your Doctors</div>
+        {% for doc in my_doctors %}
+        <div class="doctor-item" id="doc-item-{{ doc.id }}" onclick="selectDoctor('{{ doc.id }}', '{{ doc.name }}', '{{ doc.last_prescription }}')">
+            <div class="doc-avatar-sm">{{ doc.name.split()[1][0] if doc.name.split()|length > 1 else doc.name[0] }}</div>
+            <div>
+                <div class="doc-item-name">{{ doc.name }}</div>
+                <div class="doc-item-sub">{{ doc.last_prescription[:25] }}{% if doc.last_prescription|length > 25 %}...{% endif %}</div>
+                <div class="doc-item-sub">Last: {{ doc.date }}</div>
             </div>
         </div>
-        
-        <div class="chat-input">
-            <input type="text" id="messageInput" placeholder="Type message..." onkeypress="handleKeyPress(event)">
-            <button onclick="sendMessage()">Send</button>
+        {% endfor %}
+    </div>
+
+    <!-- Chat Area -->
+    <div class="chat-area">
+        <div class="chat-header" id="chat-header">
+            <div class="doc-avatar-sm" id="chat-avatar">?</div>
+            <div>
+                <div class="chat-header-name" id="chat-doc-name">Select a doctor to start</div>
+                <div class="chat-header-sub" id="chat-doc-sub">Your messages are private and secure</div>
+            </div>
+            <div class="online-dot" style="margin-left:auto;" title="Secure channel"></div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="empty-chat" id="emptyChat">
+                <p style="font-size:2.5rem;">💬</p>
+                <p>Select a doctor from the left to view your conversation</p>
+            </div>
+        </div>
+
+        <!-- Quick Questions -->
+        <div class="quick-questions" id="quickQuestions" style="display:none;">
+            <div class="quick-q-label">Quick questions:</div>
+            <div class="quick-chips">
+                <button class="quick-chip" onclick="setMessage('Can I continue the same medicines?')">Continue medicines?</button>
+                <button class="quick-chip" onclick="setMessage('I am experiencing side effects from the medication.')">Side effects</button>
+                <button class="quick-chip" onclick="setMessage('When should I come for a follow-up?')">Follow-up date?</button>
+                <button class="quick-chip" onclick="setMessage('My symptoms have not improved. What should I do?')">No improvement</button>
+                <button class="quick-chip" onclick="setMessage('Can I take this medicine with food?')">Take with food?</button>
+            </div>
+        </div>
+
+        <div class="chat-input-area" id="chatInputArea" style="display:none;">
+            <textarea id="msgInput" placeholder="Type your question or concern..." rows="2"
+                onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); sendMessage();}"></textarea>
+            <button class="send-btn" onclick="sendMessage()">Send ➤</button>
         </div>
     </div>
 </div>
-{% endblock %}
+{% endif %}
+
+<div style="margin-top:1.5rem;">
+    <a href="{{ url_for('patient_dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+</div>
 
 <script>
-function selectDoctor(id, name) {
-    document.getElementById('selectedDoctor').textContent = name;
+let currentDoctorId = null;
+let currentDoctorName = '';
+let pollInterval = null;
+
+function selectDoctor(docId, docName, lastDiagnosis) {
+    currentDoctorId = docId;
+    currentDoctorName = docName;
+
+    // Update header
+    document.getElementById('chat-doc-name').textContent = docName;
+    document.getElementById('chat-doc-sub').textContent = 'Last treated: ' + lastDiagnosis;
+    document.getElementById('chat-avatar').textContent = docName.split(' ').length > 1 ? docName.split(' ')[1][0] : docName[0];
+
+    // Highlight selected
+    document.querySelectorAll('.doctor-item').forEach(el => el.classList.remove('active'));
+    document.getElementById('doc-item-' + docId).classList.add('active');
+
+    // Show input
+    document.getElementById('quickQuestions').style.display = 'block';
+    document.getElementById('chatInputArea').style.display = 'flex';
+    document.getElementById('emptyChat').style.display = 'none';
+
+    // Load messages
+    loadConversation(docId);
+
+    // Poll for new messages every 10 seconds
+    if (pollInterval) clearInterval(pollInterval);
+    pollInterval = setInterval(() => loadConversation(docId), 10000);
 }
 
-function handleKeyPress(event) {
-    if (event.key === 'Enter') sendMessage();
+function loadConversation(docId) {
+    const patientId = '{{ user.username }}';
+    fetch(`/api/messages/conversation?patient_id=${patientId}&doctor_id=${docId}`, {
+        credentials: 'same-origin'
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (!data.success) return;
+        renderMessages(data.messages);
+    });
+}
+
+function renderMessages(msgs) {
+    const container = document.getElementById('chatMessages');
+    if (msgs.length === 0) {
+        container.innerHTML = `
+            <div style="text-align:center; padding:2rem; color:#aaa;">
+                <p style="font-size:1.5rem;">👋</p>
+                <p>No messages yet. Ask your first question!</p>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = msgs.map(m => {
+        const isSent = m.sender === 'patient';
+        const time = m.sent_at ? m.sent_at.substring(0, 16).replace('T', ' ') : '';
+        return `
+        <div class="msg-row ${isSent ? 'sent' : 'received'}">
+            <div>
+                ${!isSent ? `<div class="msg-sender">👨‍⚕️ ${m.doctor_name}</div>` : ''}
+                <div class="bubble ${isSent ? 'sent' : 'received'}">${escapeHtml(m.message)}</div>
+                <div class="msg-time">${time}</div>
+            </div>
+        </div>`;
+    }).join('');
+
+    container.scrollTop = container.scrollHeight;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(text));
+    return div.innerHTML;
+}
+
+function setMessage(text) {
+    document.getElementById('msgInput').value = text;
+    document.getElementById('msgInput').focus();
 }
 
 function sendMessage() {
-    const input = document.getElementById('messageInput');
-    const message = input.value.trim();
-    if (!message) return;
-    
-    const chatMessages = document.getElementById('chatMessages');
-    const sentMsg = document.createElement('div');
-    sentMsg.className = 'message sent';
-    sentMsg.innerHTML = `<div class="message-bubble">${message}</div>`;
-    chatMessages.appendChild(sentMsg);
-    
-    input.value = '';
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    const input = document.getElementById('msgInput');
+    const text = input.value.trim();
+    if (!text || !currentDoctorId) return;
+
+    fetch('/api/patient/send-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ doctor_id: currentDoctorId, message: text })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            input.value = '';
+            loadConversation(currentDoctorId);
+        } else {
+            alert('Failed to send: ' + data.error);
+        }
+    });
 }
 </script>
+{% endblock %}
+
+
+

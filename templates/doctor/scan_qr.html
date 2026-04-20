@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}Scan Patient QR - Doctor{% endblock %}
 
@@ -210,16 +210,18 @@
     }
     
     function fetchPatientDetails(patientId) {
-        fetch(`/api/doctor/patient/${patientId}`)
+        fetch(`/api/doctor/patient/${encodeURIComponent(patientId)}`, { credentials: 'same-origin' })
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
                     const patient = data.patient;
-                    document.getElementById('patient-name').textContent = patient.name;
-                    document.getElementById('patient-age').textContent = patient.age;
-                    document.getElementById('patient-phone').textContent = patient.phone;
-                    document.getElementById('patient-allergies').textContent = patient.allergies.join(', ');
-                    document.getElementById('patient-history').textContent = patient.medical_history.join(', ');
+                    document.getElementById('patient-name').textContent = patient.name || '—';
+                    document.getElementById('patient-age').textContent = patient.age != null ? patient.age : '—';
+                    document.getElementById('patient-phone').textContent = patient.phone || '—';
+                    const al = patient.allergies || [];
+                    const mh = patient.medical_history || [];
+                    document.getElementById('patient-allergies').textContent = Array.isArray(al) ? al.join(', ') : String(al);
+                    document.getElementById('patient-history').textContent = Array.isArray(mh) ? mh.join(', ') : String(mh);
                     
                     document.getElementById('write-rx-btn').href = `/doctor/write-prescription/${patientId}`;
                     document.getElementById('patient-details').style.display = 'block';
@@ -232,3 +234,5 @@
     startScanner();
 </script>
 {% endblock %}
+
+

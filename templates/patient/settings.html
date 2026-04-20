@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Settings — MediChain{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>⚙️ Account Settings</h2>
+    <p style="color:#6b7280;margin-top:0.3rem;">Manage your profile and preferences</p>
+</div>
+
+<div class="card">
+    <h3 style="margin-bottom:1rem;">👤 Profile Information</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">
+        <div>
+            <label style="font-size:0.8rem;font-weight:600;color:#6b7280;display:block;margin-bottom:0.3rem;">NAME</label>
+            <p style="font-weight:600;">{{ user.name }}</p>
+        </div>
+        <div>
+            <label style="font-size:0.8rem;font-weight:600;color:#6b7280;display:block;margin-bottom:0.3rem;">USERNAME</label>
+            <p style="font-weight:600;font-family:monospace;">{{ user.username }}</p>
+        </div>
+        <div>
+            <label style="font-size:0.8rem;font-weight:600;color:#6b7280;display:block;margin-bottom:0.3rem;">ROLE</label>
+            <p style="font-weight:600;">{{ user.role|capitalize }}</p>
+        </div>
+        {% if patient %}
+        <div>
+            <label style="font-size:0.8rem;font-weight:600;color:#6b7280;display:block;margin-bottom:0.3rem;">BLOOD GROUP</label>
+            <p style="font-weight:600;">{{ patient.blood_group or 'Not set' }}</p>
+        </div>
+        <div>
+            <label style="font-size:0.8rem;font-weight:600;color:#6b7280;display:block;margin-bottom:0.3rem;">AGE</label>
+            <p style="font-weight:600;">{{ patient.age or 'Not set' }}</p>
+        </div>
+        <div>
+            <label style="font-size:0.8rem;font-weight:600;color:#6b7280;display:block;margin-bottom:0.3rem;">PHONE</label>
+            <p style="font-weight:600;">{{ patient.phone or 'Not set' }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if patient %}
+<div class="card">
+    <h3 style="margin-bottom:1rem;">⚠️ Allergies</h3>
+    {% if patient.allergies %}
+        {% for allergy in patient.allergies %}
+        <span style="background:#fee2e2;color:#991b1b;padding:0.3rem 0.8rem;border-radius:20px;font-size:0.85rem;font-weight:600;margin:0.2rem;display:inline-block;">{{ allergy }}</span>
+        {% endfor %}
+    {% else %}
+        <p style="color:#9ca3af;">No allergies recorded.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3 style="margin-bottom:1rem;">🏥 Medical History</h3>
+    {% if patient.medical_history %}
+        {% for condition in patient.medical_history %}
+        <span style="background:#dbeafe;color:#1e40af;padding:0.3rem 0.8rem;border-radius:20px;font-size:0.85rem;font-weight:600;margin:0.2rem;display:inline-block;">{{ condition }}</span>
+        {% endfor %}
+    {% else %}
+        <p style="color:#9ca3af;">No medical history recorded.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3 style="margin-bottom:1rem;">🪪 Insurance</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div>
+            <label style="font-size:0.8rem;font-weight:600;color:#6b7280;display:block;margin-bottom:0.3rem;">PROVIDER</label>
+            <p style="font-weight:600;">{{ patient.insurance_provider or 'Not set' }}</p>
+        </div>
+        <div>
+            <label style="font-size:0.8rem;font-weight:600;color:#6b7280;display:block;margin-bottom:0.3rem;">POLICY ID</label>
+            <p style="font-weight:600;font-family:monospace;">{{ patient.insurance_id or 'Not set' }}</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="card" style="background:#f0fdfa;border:1px solid #99f6e4;">
+    <h3 style="margin-bottom:0.75rem;color:#0f766e;">🔐 Security</h3>
+    <p style="font-size:0.88rem;color:#374151;">Your data is secured with SHA-256 blockchain hashing and AES-256 encryption. All prescriptions are tamper-proof and immutable.</p>
+    <div style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+        <span style="background:#d1fae5;color:#065f46;padding:0.25rem 0.7rem;border-radius:20px;font-size:0.78rem;font-weight:600;">✅ Blockchain Active</span>
+        <span style="background:#d1fae5;color:#065f46;padding:0.25rem 0.7rem;border-radius:20px;font-size:0.78rem;font-weight:600;">✅ Session Encrypted</span>
+        <span style="background:#d1fae5;color:#065f46;padding:0.25rem 0.7rem;border-radius:20px;font-size:0.78rem;font-weight:600;">✅ Data Secured</span>
+    </div>
+</div>
+
+<div style="margin-top:1rem;">
+    <a href="{{ url_for('patient_dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+    <a href="{{ url_for('profile') }}" class="btn" style="margin-left:0.5rem;">View Full Profile & QR</a>
+</div>
+{% endblock %}

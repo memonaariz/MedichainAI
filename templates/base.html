@@ -1,9 +1,24 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{% block title %}MediChain - Healthcare Platform{% endblock %}</title>
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#667eea">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MediChain">
+    <meta name="application-name" content="MediChain">
+    <meta name="description" content="Blockchain-secured prescription verification and healthcare management">
+
+    <!-- PWA Manifest & Icons -->
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png">
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -301,6 +316,7 @@
         <div class="header-content">
             <div>
                 <h1><i class="fas fa-shield-alt"></i> MediChain</h1>
+                <p style="font-size:0.72rem;opacity:0.85;margin-top:0.1rem;letter-spacing:0.5px;">Blockchain Secured</p>
                 <span class="blockchain-badge">
                     <i class="fas fa-lock"></i> Blockchain Secured
                 </span>
@@ -322,12 +338,20 @@
         <div class="nav-container">
         {% if user.role == 'doctor' %}
             <a href="{{ url_for('doctor_dashboard') }}"><i class="fas fa-home"></i> Dashboard</a>
+            <a href="{{ url_for('doctor_patients') }}"><i class="fas fa-users"></i> Patients</a>
             <a href="{{ url_for('doctor_scan_qr') }}"><i class="fas fa-qrcode"></i> Scan QR</a>
+            <a href="{{ url_for('doctor_messages') }}"><i class="fas fa-comments"></i> Messages</a>
+            <a href="{{ url_for('doctor_telemedicine') }}"><i class="fas fa-video"></i> Telemedicine</a>
         {% elif user.role == 'patient' %}
             <a href="{{ url_for('patient_dashboard') }}"><i class="fas fa-home"></i> Dashboard</a>
             <a href="{{ url_for('patient_snap_prescription') }}"><i class="fas fa-camera"></i> Snap RX</a>
             <a href="{{ url_for('patient_reminders') }}"><i class="fas fa-bell"></i> Reminders</a>
             <a href="{{ url_for('patient_prescriptions') }}"><i class="fas fa-file-medical"></i> Prescriptions</a>
+            <a href="{{ url_for('patient_telemedicine') }}"><i class="fas fa-video"></i> Consult</a>
+            <a href="{{ url_for('patient_lab_reports') }}"><i class="fas fa-flask"></i> Lab Reports</a>
+            <a href="{{ url_for('patient_messages') }}"><i class="fas fa-comments"></i> Messages</a>
+        {% elif user.role == 'pharmacy' %}
+            <a href="{{ url_for('pharmacy_dashboard') }}"><i class="fas fa-clinic-medical"></i> Dashboard</a>
         {% else %}
             <a href="{{ url_for('dashboard') }}"><i class="fas fa-home"></i> Dashboard</a>
         {% endif %}
@@ -350,7 +374,7 @@
     </div>
     
     <footer>
-        <p style="font-weight: 600; font-size: 1.1rem;">&copy; 2025 MediChain - Healthcare Platform</p>
+        <p style="font-weight: 600; font-size: 1.1rem;">&copy; 2025 MediChain — Blockchain Blockchain Secured</p>
         <div class="blockchain-info">
             <span class="security-badge">
                 <i class="fas fa-shield-virus"></i> SHA-256 Encrypted
@@ -358,13 +382,126 @@
             <span class="security-badge">
                 <i class="fas fa-link"></i> Blockchain Verified
             </span>
-            <span class="security-badge">
-                <i class="fas fa-lock"></i> HIPAA Compliant
-            </span>
         </div>
         <p style="margin-top: 1rem; font-size: 0.85rem; color: #6b7280;">
             All medical records are secured using blockchain technology for immutability and transparency.
         </p>
     </footer>
+
+    <!-- PWA Install Banner -->
+    <div id="pwa-banner" style="display:none; position:fixed; bottom:0; left:0; right:0; background:linear-gradient(135deg,#667eea,#764ba2); color:white; padding:1rem 1.2rem; z-index:9999; box-shadow:0 -4px 20px rgba(0,0,0,0.2);">
+        <div style="display:flex; align-items:center; justify-content:space-between; max-width:600px; margin:0 auto;">
+            <div style="display:flex; align-items:center; gap:0.8rem;">
+                <span style="font-size:1.8rem;">ðŸ¥</span>
+                <div>
+                    <div style="font-weight:700; font-size:0.95rem;">Install MediChain App</div>
+                    <div style="font-size:0.78rem; opacity:0.9;">Add to home screen for app-like experience</div>
+                </div>
+            </div>
+            <div style="display:flex; gap:0.5rem;">
+                <button onclick="installPWA()" style="background:white; color:#667eea; border:none; padding:0.5rem 1rem; border-radius:8px; font-weight:700; cursor:pointer; font-size:0.85rem;">Install</button>
+                <button onclick="document.getElementById('pwa-banner').style.display='none'" style="background:rgba(255,255,255,0.2); color:white; border:none; padding:0.5rem 0.8rem; border-radius:8px; cursor:pointer; font-size:0.85rem;">âœ•</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // PWA Service Worker Registration
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/static/sw.js')
+                .then(reg => console.log('MediChain SW registered'))
+                .catch(err => console.log('SW registration failed:', err));
+        });
+    }
+
+    // PWA Install Prompt
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        // Show banner after 3 seconds
+        setTimeout(() => {
+            document.getElementById('pwa-banner').style.display = 'block';
+        }, 3000);
+    });
+
+    function installPWA() {
+        document.getElementById('pwa-banner').style.display = 'none';
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then(choice => {
+                deferredPrompt = null;
+            });
+        }
+    }
+
+    // Hide banner if already installed
+    window.addEventListener('appinstalled', () => {
+        document.getElementById('pwa-banner').style.display = 'none';
+    });
+
+    // â”€â”€ Medicine Reminder Notifications â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    async function requestNotificationPermission() {
+        if (!('Notification' in window)) return;
+        if (Notification.permission === 'granted') return true;
+        if (Notification.permission === 'denied') return false;
+        const result = await Notification.requestPermission();
+        return result === 'granted';
+    }
+
+    function showMedicineNotification(medName, dosage, time) {
+        if (Notification.permission !== 'granted') return;
+        const title = 'ðŸ’Š Medicine Reminder';
+        const body = `Time to take ${medName}${dosage ? ' â€” ' + dosage : ''} (${time})`;
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+                type: 'SHOW_NOTIFICATION',
+                title,
+                body,
+                tag: 'med-' + medName + '-' + time
+            });
+        } else {
+            new Notification(title, {
+                body,
+                icon: '/static/icons/icon-192.png',
+                badge: '/static/icons/icon-192.png',
+                vibrate: [200, 100, 200],
+                tag: 'med-' + medName + '-' + time
+            });
+        }
+    }
+
+    // Check reminders every minute and fire notification at the right time
+    async function startReminderScheduler() {
+        const granted = await requestNotificationPermission();
+        if (!granted) return;
+
+        async function checkNow() {
+            try {
+                const res = await fetch('/api/patient/due-reminders', { credentials: 'same-origin' });
+                if (!res.ok) return;
+                const data = await res.json();
+                if (!data.due) return;
+                data.due.forEach(r => {
+                    showMedicineNotification(r.medication, r.dosage, r.time);
+                });
+            } catch(e) {}
+        }
+
+        checkNow();
+        setInterval(checkNow, 60000); // every 60 seconds
+    }
+
+    // Only run for logged-in patients
+    {% if session.get('user') and session.get('user', {}).get('role') == 'patient' %}
+    window.addEventListener('load', () => {
+        setTimeout(startReminderScheduler, 2000);
+    });
+    {% endif %}
+    </script>
 </body>
 </html>
+
+
+

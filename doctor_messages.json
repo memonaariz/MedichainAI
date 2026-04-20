@@ -1,1 +1,13 @@
-[]
+[
+  {
+    "id": "727fba07-0a80-46db-ac98-d476bbb1f948",
+    "patient_id": "aarizmemon",
+    "patient_name": "aariz memon",
+    "doctor_id": "doctor1",
+    "doctor_name": "Dr. Sharma",
+    "message": "Can I continue the same medicines?",
+    "sender": "patient",
+    "sent_at": "2026-04-20T21:02:30.659782",
+    "read": false
+  }
+]

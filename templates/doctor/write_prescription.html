@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}Write Prescription{% endblock %}
 
@@ -84,25 +84,30 @@
         <p style="color: #d9534f;"><strong>⚠️ Allergies:</strong> {{ patient.allergies|join(', ') }}</p>
     </div>
     
-    <form id="prescription-form">
+    <form id="prescription-form" novalidate>
+        <div class="form-group">
+            <label for="diagnosis">Diagnosis / Condition:</label>
+            <input type="text" id="diagnosis" placeholder="e.g., Type 2 Diabetes, Hypertension">
+        </div>
+
         <div class="form-group">
             <label>Add Medications:</label>
             
             <div class="med-form">
                 <div class="form-group">
                     <label for="med-name">Medicine Name:</label>
-                    <input type="text" id="med-name" placeholder="e.g., Amlong, Metformin" required>
+                    <input type="text" id="med-name" placeholder="e.g., Amlong, Metformin">
                 </div>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <div class="form-group">
                         <label for="med-dosage">Dosage:</label>
-                        <input type="text" id="med-dosage" placeholder="e.g., 5mg, 500mg" required>
+                        <input type="text" id="med-dosage" placeholder="e.g., 5mg, 500mg">
                     </div>
                     
                     <div class="form-group">
                         <label for="med-frequency">Frequency:</label>
-                        <select id="med-frequency" required>
+                        <select id="med-frequency">
                             <option value="">Select frequency</option>
                             <option value="Once daily">Once daily</option>
                             <option value="Twice daily">Twice daily</option>
@@ -114,7 +119,7 @@
                 
                 <div class="form-group">
                     <label for="med-duration">Duration (days):</label>
-                    <input type="number" id="med-duration" placeholder="30" value="30" required>
+                    <input type="number" id="med-duration" placeholder="30" value="30">
                 </div>
                 
                 <button type="button" class="btn btn-secondary" onclick="addMedication()">+ Add Medicine</button>
@@ -188,12 +193,20 @@
             alert('Please add at least one medication');
             return;
         }
+
+        const diagnosis = document.getElementById('diagnosis').value.trim();
+        if (!diagnosis) {
+            alert('Please enter a diagnosis');
+            return;
+        }
         
         const response = await fetch('/api/doctor/save-prescription', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            credentials: 'same-origin',
             body: JSON.stringify({
                 patient_id: '{{ patient.id }}',
+                diagnosis: diagnosis,
                 medications: medications,
                 notes: document.getElementById('notes').value
             })
@@ -201,11 +214,13 @@
         
         const data = await response.json();
         if (data.success) {
-            alert('✅ Prescription saved successfully!');
+            alert('✅ Prescription saved successfully!\n\nPatient can now view it in their dashboard.\nMedicine reminders have been created automatically.');
             window.location.href = '{{ url_for("doctor_dashboard") }}';
         } else {
-            alert('Error: ' + data.error);
+            alert('❌ Error: ' + data.error);
         }
     });
 </script>
 {% endblock %}
+
+

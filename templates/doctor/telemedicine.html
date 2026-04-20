@@ -1,0 +1,120 @@
+﻿{% extends "base.html" %}
+{% block title %}Telemedicine Appointments - MediChain{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header { background: linear-gradient(135deg, #0f766e, #14b8a6); color: white; padding: 1.8rem; border-radius: 14px; margin-bottom: 1.5rem; }
+.page-header h2 { font-size: 1.7rem; margin-bottom: 0.3rem; }
+
+.appt-card { background: white; border-radius: 14px; padding: 1.4rem; box-shadow: 0 2px 10px rgba(0,0,0,0.09); margin-bottom: 1rem; border-left: 5px solid #0d9488; }
+.appt-card.active-now { border-left-color: #10b981; background: #f0fdf4; }
+.appt-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.8rem; margin-bottom: 0.8rem; }
+.patient-name { font-size: 1.1rem; font-weight: 700; color: #1a1a2e; }
+.appt-meta { font-size: 0.85rem; color: #555; margin-top: 0.2rem; }
+
+.status-badge { display: inline-block; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.78rem; font-weight: 700; }
+.status-active   { background: #dcfce7; color: #166534; }
+.status-scheduled { background: #dbeafe; color: #1e40af; }
+
+.join-btn {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: white; padding: 0.7rem 1.4rem; border-radius: 10px;
+    font-weight: 700; text-decoration: none; font-size: 0.95rem;
+    box-shadow: 0 4px 12px rgba(16,185,129,0.3);
+    transition: all 0.2s;
+}
+.join-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(16,185,129,0.4); }
+
+.copy-btn { background: #f1f5f9; border: 1.5px solid #ddd; color: #374151; padding: 0.5rem 0.9rem; border-radius: 8px; cursor: pointer; font-size: 0.82rem; font-weight: 600; }
+.copy-btn:hover { background: #e2e8f0; }
+
+.room-link { font-family: monospace; font-size: 0.78rem; color: #667eea; background: #f0f4ff; padding: 0.4rem 0.7rem; border-radius: 6px; word-break: break-all; margin-top: 0.5rem; }
+
+.empty-state { text-align: center; padding: 3rem; color: #888; }
+
+#toast { display: none; position: fixed; bottom: 2rem; right: 2rem; background: #059669; color: white; padding: 0.9rem 1.4rem; border-radius: 12px; font-weight: 600; z-index: 999; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <h2>📹 Telemedicine Appointments</h2>
+    <p style="opacity:0.9; font-size:0.92rem;">Patients who have booked a video consultation with you</p>
+</div>
+
+{% if appointments %}
+<p style="color:#555; margin-bottom:1rem; font-size:0.9rem;">
+    {{ appointments|length }} appointment(s) found
+</p>
+
+{% for appt in appointments %}
+<div class="appt-card {% if 'active' in (appt.status or '')|lower %}active-now{% endif %}">
+    <div class="appt-header">
+        <div>
+            <div class="patient-name">👤 {{ appt.patient_name or appt.patient_id }}</div>
+            <div class="appt-meta">
+                📅 {{ appt.appointment_date }} &nbsp;|&nbsp;
+                🕐 {{ appt.appointment_time }} &nbsp;|&nbsp;
+                💬 {{ appt.reason or 'General consultation' }}
+            </div>
+            <div class="appt-meta" style="margin-top:0.3rem;">
+                💰 ₹{{ appt.fee_inr or 199 }} &nbsp;|&nbsp;
+                📋 Follow-up till {{ appt.follow_up_until[:10] if appt.follow_up_until else 'N/A' }}
+            </div>
+        </div>
+        <span class="status-badge {% if 'active' in (appt.status or '')|lower %}status-active{% else %}status-scheduled{% endif %}">
+            {{ appt.status or 'Scheduled' }}
+        </span>
+    </div>
+
+    <!-- Video Room -->
+    <div style="background:#f8fafc; border-radius:10px; padding:1rem; margin-top:0.5rem;">
+        <div style="font-size:0.82rem; font-weight:700; color:#374151; margin-bottom:0.5rem;">🔗 Video Room Link:</div>
+        <div class="room-link">{{ appt.video_link }}</div>
+        <div style="display:flex; gap:0.6rem; margin-top:0.8rem; flex-wrap:wrap;">
+            <a href="{{ appt.video_link }}" target="_blank" rel="noopener noreferrer" class="join-btn">
+                📹 Join Video Call
+            </a>
+            <button class="copy-btn" onclick="copyLink('{{ appt.video_link }}')">
+                📋 Copy Link
+            </button>
+        </div>
+        <p style="font-size:0.75rem; color:#888; margin-top:0.5rem;">
+            Opens Jitsi Meet in new tab. Allow camera & microphone when prompted.
+        </p>
+    </div>
+</div>
+{% endfor %}
+
+{% else %}
+<div class="empty-state">
+    <p style="font-size:2.5rem;">📹</p>
+    <h3>No Telemedicine Appointments Yet</h3>
+    <p>When patients book a video consultation with you, it will appear here.</p>
+    <p style="font-size:0.85rem; color:#aaa; margin-top:0.5rem;">
+        Patients can book from: Patient Dashboard → Telemedicine → Select your name
+    </p>
+</div>
+{% endif %}
+
+<div style="margin-top:1.5rem;">
+    <a href="{{ url_for('doctor_dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+</div>
+
+<div id="toast">✅ Link copied to clipboard!</div>
+
+<script>
+function copyLink(url) {
+    navigator.clipboard.writeText(url).then(() => {
+        const t = document.getElementById('toast');
+        t.style.display = 'block';
+        setTimeout(() => t.style.display = 'none', 3000);
+    }).catch(() => prompt('Copy this link:', url));
+}
+</script>
+{% endblock %}
+
+
+

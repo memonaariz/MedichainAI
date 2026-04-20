@@ -1,21 +1,21 @@
-{% extends "base.html" %}
-
-{% block title %}Home - Senior Care App{% endblock %}
+﻿{% extends "base.html" %}
+{% block title %}MediChain - Home{% endblock %}
 
 {% block content %}
 <div class="card">
-    <h2>Welcome to Senior Care App</h2>
-    <p style="margin-top: 1rem; font-size: 1.1rem;">
-        A simple and easy-to-use application designed for seniors.
+    <h2>Welcome to MediChain</h2>
+    <p style="margin-top: 1rem; font-size: 1.05rem; color: #4b5563;">
+        Patient–doctor healthcare portal: prescriptions with blockchain verification, medicine safety tools, reminders, and telemedicine.
     </p>
     
     {% if user %}
-        <p style="margin-top: 1rem;">
-            <a href="{{ url_for('dashboard') }}" class="btn">Go to Dashboard</a>
+        <p style="margin-top: 1.25rem;">
+            <a href="{{ url_for('index') }}" class="btn">Continue to your dashboard</a>
         </p>
     {% else %}
-        <p style="margin-top: 1rem;">
+        <p style="margin-top: 1.25rem; display: flex; flex-wrap: wrap; gap: 0.75rem;">
             <a href="{{ url_for('login') }}" class="btn">Login</a>
+            <a href="{{ url_for('register') }}" class="btn" style="background: linear-gradient(135deg, #059669, #10b981);">Register</a>
         </p>
     {% endif %}
 </div>

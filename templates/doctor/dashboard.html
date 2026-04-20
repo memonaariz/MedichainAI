@@ -1,28 +1,58 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}Doctor Dashboard{% endblock %}
 
 {% block content %}
 <div class="card">
-    <h2>Doctor Dashboard</h2>
-    <p style="margin-top: 1rem; font-size: 1.1rem;">
-        Welcome, {{ user.name }}!
+    <h2><i class="fas fa-user-md"></i> Doctor dashboard</h2>
+    <p style="margin-top: 1rem; font-size: 1.1rem;">Welcome, <strong>{{ user.name }}</strong>.</p>
+    <p style="margin-top:0.5rem;color:#6b7280;font-size:0.95rem;">
+        <strong>{{ patient_count }}</strong> registered patient(s) · <strong>{{ prescription_count }}</strong> prescription record(s) in system
     </p>
-    
-    <div style="margin-top: 2rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-        <div class="card" style="background: #e8f4f8;">
-            <h3>📱 Scan Patient QR</h3>
-            <p>Scan patient's QR code to view their details and medical history</p>
-            <a href="{{ url_for('doctor_scan_qr') }}" class="btn" style="margin-top: 1rem;">Scan QR Code</a>
-        </div>
-        
-        <div class="card" style="background: #f0f8e8;">
-            <h3>📝 Write Prescription</h3>
-            <p>Write digital prescriptions for patients</p>
-            <p style="margin-top: 0.5rem; font-size: 0.9rem; color: #666;">
-                First scan a patient QR code
-            </p>
-        </div>
+</div>
+
+<div class="card" style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1px solid #a7f3d0;">
+    <h3 style="margin-top:0;"><i class="fas fa-route"></i> How this app works (doctor side)</h3>
+    <ol style="margin:0.75rem 0 0 1.25rem;line-height:1.7;color:#374151;">
+        <li><strong>Patients</strong> — See everyone who registered. Open anyone and write a prescription (blockchain hash saved).</li>
+        <li><strong>Scan QR</strong> — Optional: patient shows QR from their Profile; you scan and then write Rx.</li>
+        <li>Patient sees prescriptions under <strong>Prescriptions</strong> after login.</li>
+        <li><strong>Telemedicine</strong> — When a patient books a video call with you, it appears in Telemedicine section.</li>
+    </ol>
+</div>
+
+<div style="margin-top: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
+    <div class="card" style="background: #eff6ff;">
+        <h3><i class="fas fa-users"></i> Patients</h3>
+        <p style="color:#6b7280;">List all registered patients and write prescriptions without QR.</p>
+        <a href="{{ url_for('doctor_patients') }}" class="btn" style="margin-top: 1rem;"><i class="fas fa-list"></i> Open patient list</a>
+    </div>
+
+    <div class="card" style="background: #e8f4f8;">
+        <h3><i class="fas fa-qrcode"></i> Scan patient QR</h3>
+        <p style="color:#6b7280;">Use camera or upload image. QR text must match patient Profile.</p>
+        <a href="{{ url_for('doctor_scan_qr') }}" class="btn" style="margin-top: 1rem;"><i class="fas fa-camera"></i> Scan QR</a>
+    </div>
+
+    <div class="card" style="background: #f0fdf4;">
+        <h3><i class="fas fa-prescription-bottle-alt"></i> Quick Rx</h3>
+        <p style="color:#6b7280;">If you know the patient's MediChain ID (their username), open list and use lookup.</p>
+        <a href="{{ url_for('doctor_patients') }}" class="btn" style="margin-top: 1rem;background:linear-gradient(135deg,#059669,#10b981);"><i class="fas fa-search"></i> Lookup ID</a>
+    </div>
+
+    <div class="card" style="background: #f0fdfa;">
+        <h3><i class="fas fa-video"></i> Telemedicine</h3>
+        <p style="color:#6b7280;">View patients who booked a video consultation with you. Join their Jitsi room.</p>
+        <a href="{{ url_for('doctor_telemedicine') }}" class="btn" style="margin-top: 1rem; background:linear-gradient(135deg,#0f766e,#14b8a6);"><i class="fas fa-video"></i> View Appointments</a>
+    </div>
+
+    <div class="card" style="background: #fdf4ff;">
+        <h3><i class="fas fa-comments"></i> Patient Messages</h3>
+        <p style="color:#6b7280;">View and reply to messages from your patients.</p>
+        <a href="{{ url_for('doctor_messages') }}" class="btn" style="margin-top: 1rem; background:linear-gradient(135deg,#7c3aed,#a855f7);"><i class="fas fa-envelope"></i> Open Messages</a>
     </div>
 </div>
 {% endblock %}
+
+
+
